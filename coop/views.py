@@ -42,15 +42,42 @@ def _entry_tone(entry):
     return "info"
 
 
+def _entry_time_label(entry):
+    if entry.is_all_day:
+        return "Tüm gün"
+    return timezone.localtime(entry.starts_at).strftime("%H:%M")
+
+
+def _entry_week_title(entry):
+    if entry.event_type == DELIVERY:
+        return "Teslimat"
+    if entry.event_type == ORDER_DEADLINE:
+        return "Deadline"
+    return entry.title
+
+
 def _decorate_entries(entries):
-    return [{"entry": entry, "tone": _entry_tone(entry)} for entry in entries]
+    return [
+        {
+            "entry": entry,
+            "tone": _entry_tone(entry),
+            "time_label": _entry_time_label(entry),
+            "week_title": _entry_week_title(entry),
+        }
+        for entry in entries
+    ]
 
 
-def _build_calendar_grid(entries, anchor_date, view_mode):
+def _entries_by_date(entries):
     entries_by_date = {}
     for entry in entries:
         local_date = timezone.localtime(entry.starts_at).date()
         entries_by_date.setdefault(local_date, []).append(entry)
+    return entries_by_date
+
+
+def _build_calendar_grid(entries, anchor_date, view_mode):
+    entries_by_date = _entries_by_date(entries)
 
     if view_mode == "week":
         week_start = anchor_date - timedelta(days=anchor_date.weekday())
@@ -80,6 +107,33 @@ def _build_calendar_grid(entries, anchor_date, view_mode):
             )
         weeks.append(days)
     return weeks
+
+
+def _build_week_cards(entries, anchor_date):
+    entries_by_date = _entries_by_date(entries)
+    week_start = anchor_date - timedelta(days=anchor_date.weekday())
+    today = timezone.localdate()
+    days = []
+
+    for offset in range(7):
+        day = week_start + timedelta(days=offset)
+        decorated_entries = _decorate_entries(entries_by_date.get(day, []))
+        days.append(
+            {
+                "date": day,
+                "weekday_label": WEEKDAY_LABELS[day.weekday()],
+                "is_sunday": day.weekday() == 6,
+                "is_today": day == today,
+                "primary_entry": decorated_entries[0] if decorated_entries else None,
+                "entries": decorated_entries,
+                "extra_count": max(len(decorated_entries) - 1, 0),
+            }
+        )
+    return days
+
+
+def _week_summary_entries(week_days):
+    return [item for day in week_days for item in day["entries"]]
 
 
 def _calendar_navigation(anchor_date, view_mode):
@@ -120,6 +174,7 @@ def dashboard(request):
     offer_cards = [{"offer": offer, "intent": user_intents.get(offer.pk)} for offer in active_offers]
     week_start = calendar_anchor - timedelta(days=calendar_anchor.weekday())
     week_end = week_start + timedelta(days=6)
+    calendar_week_days = _build_week_cards(calendar_entries, calendar_anchor)
 
     context = {
         "active_offer_count": len(active_offers),
@@ -130,6 +185,8 @@ def dashboard(request):
         "calendar_selected_date": calendar_anchor,
         "calendar_view": calendar_view,
         "calendar_week_end": week_end,
+        "calendar_week_days": calendar_week_days,
+        "calendar_week_summary": _week_summary_entries(calendar_week_days),
         "calendar_week_start": week_start,
         "calendar_weeks": _build_calendar_grid(calendar_entries, calendar_anchor, calendar_view),
         "offer_cards": offer_cards,

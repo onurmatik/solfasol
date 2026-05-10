@@ -40,28 +40,69 @@
           </div>
         </div>
 
-        <div class="calendar-grid">
-          {% for label in weekday_labels %}
-            <div class="calendar-weekday">{{ label }}</div>
-          {% endfor %}
-          {% for week in calendar_weeks %}
-            {% for day in week %}
-              <div class="calendar-day{% if not day.is_current_period %} inactive{% endif %}{% if day.is_today %} today{% endif %}">
-                <span class="calendar-day-number">{{ day.date|date:"j" }}</span>
-                {% if day.entries %}
-                  <div class="calendar-day-events">
-                    {% for item in day.entries %}
-                      <span class="calendar-event-marker {{ item.tone }}" title="{{ item.entry.title }}"></span>
-                    {% endfor %}
+        {% if calendar_view == "week" %}
+          <div class="weekly-calendar-grid">
+            {% for day in calendar_week_days %}
+              <div class="weekly-day-card{% if day.is_today %} today{% endif %}{% if day.is_sunday %} sunday{% endif %}">
+                <div class="weekly-day-head">
+                  <span>{{ day.weekday_label }}</span>
+                  <strong>{{ day.date|date:"j" }}</strong>
+                </div>
+
+                <div class="weekly-day-body">
+                  {% if day.primary_entry %}
+                    <div class="weekly-event-title">
+                      <span class="weekly-event-dot {{ day.primary_entry.tone }}"></span>
+                      <strong>{{ day.primary_entry.week_title }}</strong>
+                    </div>
+                    <p>{{ day.primary_entry.time_label }}</p>
                     {% if day.extra_count %}
-                      <span class="calendar-event-more">+{{ day.extra_count }}</span>
+                      <span class="weekly-event-more">+{{ day.extra_count }} etkinlik</span>
                     {% endif %}
-                  </div>
-                {% endif %}
+                  {% else %}
+                    <p class="weekly-empty">Etkinlik yok</p>
+                  {% endif %}
+                </div>
               </div>
             {% endfor %}
-          {% endfor %}
-        </div>
+            <div class="weekly-summary-card">
+              <strong>Haftanın etkinlikleri</strong>
+              <ul>
+                {% for item in calendar_week_summary %}
+                  <li>
+                    <span class="weekly-event-dot {{ item.tone }}"></span>
+                    <span>{{ item.entry.title }}</span>
+                  </li>
+                {% empty %}
+                  <li class="weekly-summary-empty">Bu hafta etkinlik yok.</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        {% else %}
+          <div class="calendar-grid">
+            {% for label in weekday_labels %}
+              <div class="calendar-weekday">{{ label }}</div>
+            {% endfor %}
+            {% for week in calendar_weeks %}
+              {% for day in week %}
+                <div class="calendar-day{% if not day.is_current_period %} inactive{% endif %}{% if day.is_today %} today{% endif %}">
+                  <span class="calendar-day-number">{{ day.date|date:"j" }}</span>
+                  {% if day.entries %}
+                    <div class="calendar-day-events">
+                      {% for item in day.entries %}
+                        <span class="calendar-event-marker {{ item.tone }}" title="{{ item.entry.title }}"></span>
+                      {% endfor %}
+                      {% if day.extra_count %}
+                        <span class="calendar-event-more">+{{ day.extra_count }}</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        {% endif %}
       </section>
 
       <section class="panel">

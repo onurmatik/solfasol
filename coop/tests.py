@@ -40,6 +40,18 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         self.assertContains(response, "Talebim var")
         self.assertNotContains(response, "Son taleplerim")
 
+    def test_dashboard_weekly_view_uses_week_card_layout(self):
+        self.client.login(username="member", password="pass12345")
+        week_date = (timezone.localdate() + timedelta(days=3)).strftime("%Y-%m-%d")
+
+        response = self.client.get(reverse("dashboard"), {"calendar_view": "week", "date": week_date})
+
+        self.assertContains(response, "weekly-calendar-grid")
+        self.assertContains(response, "weekly-day-card")
+        self.assertContains(response, "Haftanın etkinlikleri")
+        self.assertContains(response, "Deadline")
+        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+
 
 class ModelValidationTests(CoopFixtureMixin, TestCase):
     def test_offer_total_remaining_and_success_are_computed_from_intents(self):
