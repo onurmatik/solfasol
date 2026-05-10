@@ -34,6 +34,7 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         self.assertContains(response, "ABC Ziraat 5lt zeytinyağı")
         self.assertContains(response, "Aylık")
         self.assertContains(response, "Haftalık")
+        self.assertContains(response, "weekly-calendar-grid")
         self.assertContains(response, "Yaklaşan etkinlikler")
         self.assertContains(response, "Kompost atölyesi")
         self.assertContains(response, "5lt zeytinyağı sipariş deadline")

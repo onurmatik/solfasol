@@ -35,8 +35,8 @@
             </div>
           </div>
           <div class="segmented-control" aria-label="Takvim görünümü">
-            <a class="segmented-option{% if calendar_view == 'month' %} active{% endif %}" href="?calendar_view=month&date={{ calendar_selected_date|date:'Y-m-d' }}">Aylık</a>
             <a class="segmented-option{% if calendar_view == 'week' %} active{% endif %}" href="?calendar_view=week&date={{ calendar_selected_date|date:'Y-m-d' }}">Haftalık</a>
+            <a class="segmented-option{% if calendar_view == 'month' %} active{% endif %}" href="?calendar_view=month&date={{ calendar_selected_date|date:'Y-m-d' }}">Aylık</a>
           </div>
         </div>
 

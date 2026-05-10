@@ -167,7 +167,7 @@ def dashboard(request):
     }
     calendar_view = request.GET.get("calendar_view")
     if calendar_view not in {"month", "week"}:
-        calendar_view = "month"
+        calendar_view = "week"
     calendar_anchor = _parse_anchor_date(request.GET.get("date"))
     calendar_entries = list_calendar_entries()
     prev_calendar_date, next_calendar_date = _calendar_navigation(calendar_anchor, calendar_view)
