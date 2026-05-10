@@ -1,0 +1,228 @@
+import json
+from datetime import date, timedelta
+from decimal import Decimal
+
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from common.test_helpers import CoopFixtureMixin
+from members.models import UserProfile
+
+from .models import MemberOfferIntent, ProcurementOffer, SupplierSource
+
+
+class DashboardTests(CoopFixtureMixin, TestCase):
+    def test_dashboard_requires_login_and_renders_offers(self):
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 302)
+
+        self.client.login(username="member", password="pass12345")
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "Aktif teklifler")
+        self.assertContains(response, "ABC Ziraat 5lt zeytinyağı")
+
+
+class ModelValidationTests(CoopFixtureMixin, TestCase):
+    def test_offer_total_remaining_and_success_are_computed_from_intents(self):
+        MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=Decimal("4"))
+        other = User.objects.create_user(username="other")
+        UserProfile.objects.create(user=other, is_coop_member=True)
+        MemberOfferIntent.objects.create(member=other, offer=self.offer, quantity=Decimal("6"))
+
+        self.assertEqual(self.offer.total_quantity, Decimal("10"))
+        self.assertEqual(self.offer.remaining_quantity, Decimal("0"))
+        self.assertTrue(self.offer.is_successful)
+
+    def test_intent_rejects_deadline_passed_offer(self):
+        expired_offer = ProcurementOffer.objects.create(
+            title="Geçmiş teklif",
+            product=self.product,
+            source=self.source,
+            unit_price=Decimal("900"),
+            target_quantity=Decimal("10"),
+            deadline=timezone.now() - timedelta(hours=1),
+            fulfillment_date=date(2026, 5, 20),
+        )
+        intent = MemberOfferIntent(member=self.member, offer=expired_offer, quantity=Decimal("1"))
+
+        with self.assertRaises(ValidationError):
+            intent.full_clean()
+
+    def test_intent_rejects_closed_offer(self):
+        self.offer.status = ProcurementOffer.Status.CLOSED
+        self.offer.save()
+        intent = MemberOfferIntent(member=self.member, offer=self.offer, quantity=Decimal("1"))
+
+        with self.assertRaises(ValidationError):
+            intent.full_clean()
+
+    def test_member_can_have_one_intent_per_offer(self):
+        MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=Decimal("1"))
+        duplicate = MemberOfferIntent(member=self.member, offer=self.offer, quantity=Decimal("2"))
+
+        with self.assertRaises(ValidationError):
+            duplicate.full_clean()
+
+
+class CoopApiTests(CoopFixtureMixin, TestCase):
+    def post_json(self, path, payload):
+        return self.client.post(path, data=json.dumps(payload), content_type="application/json")
+
+    def patch_json(self, path, payload):
+        return self.client.patch(path, data=json.dumps(payload), content_type="application/json")
+
+    def test_offer_list_and_detail_include_target_progress(self):
+        self.client.login(username="member", password="pass12345")
+        MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=Decimal("3"))
+
+        response = self.client.get("/api/v1/offers")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload[0]["title"], "ABC Ziraat 5lt zeytinyağı")
+        self.assertEqual(payload[0]["total_quantity"], "3")
+        self.assertEqual(payload[0]["current_user_intent"]["quantity"], "3.00")
+
+        response = self.client.get(f"/api/v1/offers/{self.offer.id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["remaining_quantity"], "7.00")
+
+    def test_member_offer_intent_api_upserts_and_deletes(self):
+        self.client.login(username="member", password="pass12345")
+
+        response = self.post_json(
+            f"/api/v1/offers/{self.offer.id}/intent",
+            {"delivery_point_id": self.delivery_point.id, "quantity": "4.50", "note": "iki aile"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        intent = MemberOfferIntent.objects.get(member=self.member, offer=self.offer)
+        self.assertEqual(intent.quantity, Decimal("4.50"))
+
+        response = self.post_json(f"/api/v1/offers/{self.offer.id}/intent", {"quantity": "6.00"})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(MemberOfferIntent.objects.count(), 1)
+        intent.refresh_from_db()
+        self.assertEqual(intent.quantity, Decimal("6.00"))
+
+        response = self.client.delete(f"/api/v1/offer-intents/{intent.id}")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(MemberOfferIntent.objects.count(), 0)
+
+    def test_deadline_blocks_intent_api_changes(self):
+        self.offer.deadline = timezone.now() - timedelta(minutes=1)
+        self.offer.save()
+        self.client.login(username="member", password="pass12345")
+
+        response = self.post_json(f"/api/v1/offers/{self.offer.id}/intent", {"quantity": "1"})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_staff_only_admin_source_and_offer_api(self):
+        self.client.login(username="member", password="pass12345")
+        response = self.post_json("/api/v1/admin/supplier-sources", {"name": "Üye Kaynağı"})
+        self.assertEqual(response.status_code, 403)
+
+        self.client.logout()
+        self.client.login(username="staff", password="pass12345")
+        response = self.post_json(
+            "/api/v1/admin/supplier-sources",
+            {"name": "DEF Tarım", "website": "https://def.example", "contact_info": "info@def.example"},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        source_id = response.json()["id"]
+
+        response = self.post_json(
+            "/api/v1/admin/offers",
+            {
+                "title": "DEF nohut",
+                "product_id": self.product.id,
+                "source_id": source_id,
+                "unit_price": "250.00",
+                "target_quantity": "20",
+                "deadline": (timezone.now() + timedelta(days=2)).isoformat(),
+                "fulfillment_date": "2026-05-20",
+            },
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        offer_id = response.json()["id"]
+
+        response = self.patch_json(f"/api/v1/admin/offers/{offer_id}", {"status": ProcurementOffer.Status.CLOSED})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["status"], ProcurementOffer.Status.CLOSED)
+
+
+class CoopViewTests(CoopFixtureMixin, TestCase):
+    def test_supplier_offer_page_is_removed(self):
+        self.client.login(username="member", password="pass12345")
+
+        response = self.client.get("/supplier/offers/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_offer_detail_allows_member_to_create_update_and_delete_intent(self):
+        self.client.login(username="member", password="pass12345")
+
+        response = self.client.post(
+            reverse("offer_detail", kwargs={"pk": self.offer.pk}),
+            {"quantity": "2", "delivery_point": self.delivery_point.id, "note": "deneme"},
+        )
+        self.assertRedirects(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+        intent = MemberOfferIntent.objects.get(member=self.member, offer=self.offer)
+        self.assertEqual(intent.quantity, Decimal("2"))
+
+        response = self.client.post(
+            reverse("offer_detail", kwargs={"pk": self.offer.pk}),
+            {"quantity": "3", "delivery_point": self.delivery_point.id},
+        )
+        self.assertRedirects(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+        intent.refresh_from_db()
+        self.assertEqual(intent.quantity, Decimal("3"))
+
+        response = self.client.post(reverse("delete_offer_intent", kwargs={"pk": intent.pk}))
+        self.assertRedirects(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+        self.assertFalse(MemberOfferIntent.objects.exists())
+
+    def test_staff_can_create_source_and_close_offer_from_ops(self):
+        self.client.login(username="staff", password="pass12345")
+
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, "Teklif yayınla")
+
+        response = self.client.get(reverse("ops_dashboard"))
+        self.assertNotContains(response, "Yeni teklif")
+        self.assertNotContains(response, "Teklif yayınla")
+        self.assertContains(response, "Django admin")
+
+        response = self.client.post(
+            reverse("ops_dashboard"),
+            {"action": "source", "name": "GHI Kooperatif", "website": "", "contact_info": "", "notes": "", "is_active": "on"},
+        )
+        self.assertRedirects(response, reverse("ops_dashboard"))
+        SupplierSource.objects.get(name="GHI Kooperatif")
+
+        response = self.client.post(
+            reverse("ops_dashboard"),
+            {
+                "action": "offer",
+                "title": "GHI mercimek",
+                "product": self.product.id,
+                "source": self.source.id,
+                "unit_price": "150.00",
+                "target_quantity": "15",
+                "deadline": (timezone.now() + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M"),
+                "fulfillment_date": "2026-05-20",
+                "status": ProcurementOffer.Status.OPEN,
+                "admin_note": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ProcurementOffer.objects.filter(title="GHI mercimek").exists())
+
+        response = self.client.post(reverse("close_offer", kwargs={"pk": self.offer.pk}))
+        self.assertRedirects(response, reverse("ops_dashboard"))
+        self.offer.refresh_from_db()
+        self.assertEqual(self.offer.status, ProcurementOffer.Status.CLOSED)

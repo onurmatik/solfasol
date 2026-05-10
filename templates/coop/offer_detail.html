@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ offer.title }} - Solfasol{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Teklif</p>
+      <h1>{{ offer.title }}</h1>
+      <p class="muted">{{ offer.source.name }} · {{ offer.product.name }} · Gerçekleşme: {{ offer.fulfillment_date|date:"d M Y" }}</p>
+    </div>
+    {% if offer.is_successful %}
+      <span class="badge success">Başarılı</span>
+    {% elif offer.deadline_passed %}
+      <span class="badge warning">Deadline geçti</span>
+    {% elif offer.status == "closed" %}
+      <span class="badge danger">Kapandı</span>
+    {% else %}
+      <span class="badge success">Açık</span>
+    {% endif %}
+  </div>
+
+  <div class="grid two">
+    <section class="panel">
+      <div class="stack">
+        <h2>Hedef durumu</h2>
+        <div class="grid three">
+          <div class="stat">
+            <span class="muted">Fiyat</span>
+            <strong>{{ offer.unit_price }} TL</strong>
+          </div>
+          <div class="stat">
+            <span class="muted">Toplam</span>
+            <strong>{{ offer.total_quantity }} {{ offer.product.unit }}</strong>
+          </div>
+          <div class="stat">
+            <span class="muted">Hedef</span>
+            <strong>{{ offer.target_quantity }} {{ offer.product.unit }}</strong>
+          </div>
+        </div>
+        <p class="muted">Kalan: {{ offer.remaining_quantity }} {{ offer.product.unit }} · Deadline: {{ offer.deadline|date:"d M Y H:i" }}</p>
+        {% if offer.admin_note %}
+          <div class="message">{{ offer.admin_note }}</div>
+        {% endif %}
+        {% if offer.source.website or offer.source.contact_info %}
+          <p class="muted">
+            Kaynak:
+            {% if offer.source.website %}<a href="{{ offer.source.website }}">{{ offer.source.website }}</a>{% endif %}
+            {% if offer.source.contact_info %} · {{ offer.source.contact_info }}{% endif %}
+          </p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="stack">
+        <h2>Benim niyetim</h2>
+        {% if offer.accepts_intents %}
+          <form method="post" class="stack">
+            {% csrf_token %}
+            {{ form.as_div }}
+            <div class="form-actions">
+              {% if existing_intent %}
+                <button class="primary" type="submit">Niyeti güncelle</button>
+              {% else %}
+                <button class="primary" type="submit">Niyet gir</button>
+              {% endif %}
+            </div>
+          </form>
+          {% if existing_intent %}
+            <form method="post" action="{% url 'delete_offer_intent' existing_intent.pk %}">
+              {% csrf_token %}
+              <button class="danger" type="submit">Niyetimi iptal et</button>
+            </form>
+          {% endif %}
+        {% else %}
+          <div class="empty">Bu teklif artık yeni niyet veya değişiklik kabul etmiyor.</div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top: 16px;">
+    <div class="stack">
+      <h2>Katılım listesi</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Üye</th>
+              <th>Miktar</th>
+              <th>Teslim</th>
+              <th>Not</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for intent in intents %}
+              <tr>
+                <td>{{ intent.member.get_username }}</td>
+                <td>{{ intent.quantity }} {{ offer.product.unit }}</td>
+                <td>{{ intent.delivery_point.name|default:"-" }}</td>
+                <td>{{ intent.note|default:"-" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4">Henüz niyet yok.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}

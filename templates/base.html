@@ -1,0 +1,46 @@
+{% load static %}
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Solfasol{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/solfasol.css' %}">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <a class="brand" href="{% url 'dashboard' %}">Solfasol</a>
+          <nav class="nav-links">
+            {% if user.is_authenticated %}
+              <a href="{% url 'dashboard' %}">Teklifler</a>
+              <a href="{% url 'invitations' %}">Davetler</a>
+              {% if user.is_staff %}
+                <a href="{% url 'ops_dashboard' %}">Operasyon</a>
+                <a href="{% url 'admin:index' %}">Admin</a>
+              {% endif %}
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="button linklike" type="submit">Çıkış</button>
+              </form>
+            {% else %}
+              <a href="{% url 'login' %}">Giriş</a>
+            {% endif %}
+          </nav>
+        </div>
+      </header>
+
+      <main class="page">
+        {% if messages %}
+          <div class="messages">
+            {% for message in messages %}
+              <div class="message">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>
