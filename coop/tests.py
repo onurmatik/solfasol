@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from calendar.models import CalendarEvent
 from common.test_helpers import CoopFixtureMixin
 from members.models import UserProfile
 
@@ -16,14 +17,28 @@ from .models import MemberOfferIntent, ProcurementOffer
 
 class DashboardTests(CoopFixtureMixin, TestCase):
     def test_dashboard_requires_login_and_renders_offers(self):
+        CalendarEvent.objects.create(
+            title="Kompost atölyesi",
+            starts_at=timezone.now() + timedelta(days=1),
+            status=CalendarEvent.Status.PUBLISHED,
+        )
+
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 302)
 
+        MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=Decimal("2"))
         self.client.login(username="member", password="pass12345")
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, "Aktif teklifler")
+        self.assertContains(response, "Aktif sipariş talepleri")
         self.assertContains(response, "ABC Ziraat 5lt zeytinyağı")
+        self.assertContains(response, "Aylık")
+        self.assertContains(response, "Haftalık")
+        self.assertContains(response, "Yaklaşan etkinlikler")
+        self.assertContains(response, "Kompost atölyesi")
+        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertContains(response, "Talebim var")
+        self.assertNotContains(response, "Son taleplerim")
 
 
 class ModelValidationTests(CoopFixtureMixin, TestCase):

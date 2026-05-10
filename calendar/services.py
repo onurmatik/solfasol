@@ -106,3 +106,14 @@ def list_calendar_entries():
     for offer in offers:
         offer_entries.extend(_offer_entries(offer))
     return sorted([*manual_entries, *offer_entries], key=lambda entry: (entry.starts_at, entry.title))
+
+
+def list_upcoming_calendar_entries(limit=None):
+    today_start = timezone.make_aware(
+        datetime.combine(timezone.localdate(), time.min),
+        timezone.get_current_timezone(),
+    )
+    entries = [entry for entry in list_calendar_entries() if entry.starts_at >= today_start]
+    if limit is None:
+        return entries
+    return entries[:limit]

@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% load l10n %}
 
-{% block title %}Teklifler - Solfasol{% endblock %}
+{% block title %}Kooperatif gündemi - Solfasol{% endblock %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <p class="eyebrow">Kooperatif paneli</p>
-      <h1>Aktif teklifler</h1>
-      <p class="muted">Deadline'a kadar adet talebinizi girin. Hedef tutarsa sipariş verme süreci manuel ilerler.</p>
+      <p class="eyebrow">Üye paneli</p>
+      <h1>Kooperatif gündemi</h1>
+      <p class="muted">Takvim etkinlikleri ve aktif sipariş talepleri tek ekranda.</p>
     </div>
     <div class="row">
       {% if can_create_invitations %}
@@ -16,75 +17,156 @@
     </div>
   </div>
 
-  <div class="grid two">
-    <section class="panel">
-      <div class="stack">
-        <h2>Yayındaki teklifler</h2>
-        {% for offer in active_offers %}
-          <article class="card stack">
-            <div class="row between">
-              <div>
-                <h3><a href="{% url 'offer_detail' offer.pk %}">{{ offer.title }}</a></h3>
-                <p class="muted">{{ offer.source.name }} · {{ offer.product.name }}</p>
-              </div>
-              {% if offer.is_successful %}
-                <span class="badge success">Başarılı</span>
-              {% elif offer.deadline_passed %}
-                <span class="badge warning">Deadline geçti</span>
+  <div class="dashboard-grid">
+    <main class="dashboard-main stack">
+      <section class="panel calendar-panel">
+        <div class="calendar-toolbar">
+          <div class="calendar-title-group">
+            <h2>
+              {% if calendar_view == "week" %}
+                {{ calendar_week_start|date:"d M" }} - {{ calendar_week_end|date:"d M Y" }}
               {% else %}
-                <span class="badge success">Açık</span>
+                {{ calendar_anchor|date:"F Y" }}
               {% endif %}
+            </h2>
+            <div class="row calendar-nav">
+              <a class="icon-button" href="?calendar_view={{ calendar_view }}&date={{ calendar_prev_date|date:'Y-m-d' }}" aria-label="Önceki dönem">‹</a>
+              <a class="icon-button" href="?calendar_view={{ calendar_view }}&date={{ calendar_next_date|date:'Y-m-d' }}" aria-label="Sonraki dönem">›</a>
             </div>
-            <div class="grid three">
-              <div class="stat">
-                <span class="muted">Fiyat</span>
-                <strong>{{ offer.unit_price }} TL</strong>
-              </div>
-              <div class="stat">
-                <span class="muted">Toplam / hedef</span>
-                <strong>{{ offer.total_quantity }} / {{ offer.target_quantity }}</strong>
-              </div>
-              <div class="stat">
-                <span class="muted">Deadline</span>
-                <strong style="font-size: 16px;">{{ offer.deadline|date:"d M Y H:i" }}</strong>
-              </div>
-            </div>
-            <p class="muted">Gerçekleşme tarihi: {{ offer.fulfillment_date|date:"d M Y" }} · Kalan: {{ offer.remaining_quantity }} {{ offer.product.unit }}</p>
-          </article>
-        {% empty %}
-          <div class="empty">Aktif teklif yok.</div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="stack">
-        <h2>Son taleplerim</h2>
-        {% if my_intents %}
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Teklif</th>
-                  <th>Miktar</th>
-                  <th>Teslim</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for intent in my_intents %}
-                  <tr>
-                    <td><a href="{% url 'offer_detail' intent.offer.pk %}">{{ intent.offer.title }}</a></td>
-                    <td>{{ intent.quantity }} {{ intent.offer.product.unit }}</td>
-                    <td>{{ intent.delivery_point.name|default:"-" }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
           </div>
-        {% else %}
-          <div class="empty">Henüz teklif talebi girilmedi.</div>
-        {% endif %}
-      </div>
-    </section>
+          <div class="segmented-control" aria-label="Takvim görünümü">
+            <a class="segmented-option{% if calendar_view == 'month' %} active{% endif %}" href="?calendar_view=month&date={{ calendar_selected_date|date:'Y-m-d' }}">Aylık</a>
+            <a class="segmented-option{% if calendar_view == 'week' %} active{% endif %}" href="?calendar_view=week&date={{ calendar_selected_date|date:'Y-m-d' }}">Haftalık</a>
+          </div>
+        </div>
+
+        <div class="calendar-grid">
+          {% for label in weekday_labels %}
+            <div class="calendar-weekday">{{ label }}</div>
+          {% endfor %}
+          {% for week in calendar_weeks %}
+            {% for day in week %}
+              <div class="calendar-day{% if not day.is_current_period %} inactive{% endif %}{% if day.is_today %} today{% endif %}">
+                <span class="calendar-day-number">{{ day.date|date:"j" }}</span>
+                {% if day.entries %}
+                  <div class="calendar-day-events">
+                    {% for item in day.entries %}
+                      <span class="calendar-event-marker {{ item.tone }}" title="{{ item.entry.title }}"></span>
+                    {% endfor %}
+                    {% if day.extra_count %}
+                      <span class="calendar-event-more">+{{ day.extra_count }}</span>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Yaklaşan etkinlikler</h2>
+            <p class="muted">Sipariş deadline'ları, teslimatlar ve topluluk etkinlikleri.</p>
+          </div>
+          <a class="button" href="{% url 'calendar' %}">Tüm takvimi aç</a>
+        </div>
+
+        <div class="event-list">
+          {% for item in calendar_entries %}
+            <article class="event-list-item">
+              <div class="event-datebox">
+                <span>{{ item.entry.starts_at|date:"M" }}</span>
+                <strong>{{ item.entry.starts_at|date:"d" }}</strong>
+              </div>
+              <div class="event-list-body">
+                <div class="row between">
+                  <h3>
+                    {% if item.entry.offer_id and user.is_authenticated %}
+                      <a href="{{ item.entry.offer_url }}">{{ item.entry.title }}</a>
+                    {% else %}
+                      {{ item.entry.title }}
+                    {% endif %}
+                  </h3>
+                  <span class="badge {{ item.tone }}">{{ item.entry.event_type_label }}</span>
+                </div>
+                <p class="muted">
+                  {% if item.entry.is_all_day %}
+                    Tüm gün
+                  {% else %}
+                    {{ item.entry.starts_at|date:"H:i" }}
+                  {% endif %}
+                  {% if item.entry.location_name %} · {{ item.entry.location_name }}{% endif %}
+                  {% if item.entry.description %} · {{ item.entry.description }}{% endif %}
+                </p>
+              </div>
+            </article>
+          {% empty %}
+            <div class="empty">Yaklaşan takvim girdisi yok.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </main>
+
+    <aside class="dashboard-sidebar">
+      <section class="panel">
+        <div class="stack">
+          <div class="section-heading">
+            <div>
+              <h2>Aktif sipariş talepleri</h2>
+              <p class="muted">Talebiniz olan ürünler kart içinde işaretlenir.</p>
+            </div>
+            <span class="badge">{{ active_offer_count }} aktif</span>
+          </div>
+
+          <div class="offer-sidebar-list">
+            {% for card in offer_cards %}
+              {% with offer=card.offer intent=card.intent %}
+                <article class="offer-sidebar-card{% if intent %} has-intent{% endif %}">
+                  <div class="row between">
+                    <div>
+                      <h3><a href="{% url 'offer_detail' offer.pk %}">{{ offer.title }}</a></h3>
+                      <p class="muted">{{ offer.source.name }} · {{ offer.product.name }}</p>
+                    </div>
+                    {% if offer.is_successful %}
+                      <span class="badge success">Başarılı</span>
+                    {% elif offer.deadline_passed %}
+                      <span class="badge warning">Deadline geçti</span>
+                    {% else %}
+                      <span class="badge info">Açık</span>
+                    {% endif %}
+                  </div>
+
+                  <div class="offer-progress compact">
+                    <div class="row between">
+                      <span class="muted">Sipariş ilerlemesi</span>
+                      <strong>{{ offer.total_quantity }} / {{ offer.target_quantity }} {{ offer.product.unit }}</strong>
+                    </div>
+                    <progress value="{{ offer.total_quantity|unlocalize }}" max="{{ offer.target_quantity|unlocalize }}">{{ offer.total_quantity }}</progress>
+                  </div>
+
+                  {% if intent %}
+                    <div class="intent-highlight">
+                      <span class="badge success">Talebim var</span>
+                      <strong class="mono">{{ intent.quantity }} {{ offer.product.unit }}</strong>
+                    </div>
+                  {% else %}
+                    <p class="muted small">Bu teklif için talebiniz bulunmuyor.</p>
+                  {% endif %}
+
+                  <div class="offer-sidebar-meta">
+                    <span>Teslim: {{ offer.fulfillment_date|date:"d M" }}</span>
+                    <span>Deadline: {{ offer.deadline|date:"d M H:i" }}</span>
+                  </div>
+                </article>
+              {% endwith %}
+            {% empty %}
+              <div class="empty">Aktif sipariş talebi yok.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </aside>
   </div>
 {% endblock %}
