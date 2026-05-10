@@ -151,12 +151,12 @@ class MemberOfferIntent(TimeStampedModel):
     class Meta:
         ordering = ["-created_at"]
         unique_together = [("member", "offer")]
-        verbose_name = "Üye teklif niyeti"
-        verbose_name_plural = "Üye teklif niyetleri"
+        verbose_name = "Üye teklif talebi"
+        verbose_name_plural = "Üye teklif talepleri"
 
     def __str__(self):
         return f"{self.member} - {self.offer} - {self.quantity}"
 
     def clean(self):
         if self.offer_id and not self.offer.accepts_intents:
-            raise ValidationError("Bu teklif artık üye niyeti kabul etmiyor.")
+            raise ValidationError("Bu teklif artık üye talebi kabul etmiyor.")

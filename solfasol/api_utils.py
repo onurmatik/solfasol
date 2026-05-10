@@ -19,9 +19,4 @@ def require_active_coop_member(user):
         raise HttpError(403, "Aktif üye hesabı gerekir.")
 
 
-def require_staff(user):
-    if not user.is_authenticated or not user.is_staff:
-        raise HttpError(403, "Admin yetkisi gerekir.")
-
-
-__all__ = ["DjangoValidationError", "raise_bad_request", "require_active_coop_member", "require_staff"]
+__all__ = ["DjangoValidationError", "raise_bad_request", "require_active_coop_member"]

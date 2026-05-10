@@ -51,6 +51,19 @@ class InvitationTests(CoopFixtureMixin, TestCase):
         invitation.refresh_from_db()
         self.assertEqual(invitation.status, Invitation.Status.REVOKED)
 
+    def test_staff_without_member_profile_cannot_manage_invitations_in_app(self):
+        invitation = Invitation.objects.create(created_by=self.member, label="Mahalle")
+        self.client.login(username="staff", password="pass12345")
+
+        response = self.client.get(reverse("invitations"))
+        self.assertRedirects(response, reverse("dashboard"))
+
+        response = self.client.post(reverse("revoke_invitation", kwargs={"pk": invitation.pk}))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("invitations"))
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, Invitation.Status.ACTIVE)
+
 
 class InvitationApiTests(CoopFixtureMixin, TestCase):
     def post_json(self, path, payload):
@@ -88,3 +101,15 @@ class InvitationApiTests(CoopFixtureMixin, TestCase):
         payload = response.json()
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["label"], "Mahalle")
+
+    def test_staff_without_member_profile_cannot_use_invitation_api(self):
+        invitation = Invitation.objects.create(created_by=self.member, label="Mahalle")
+        self.client.login(username="staff", password="pass12345")
+
+        response = self.client.get("/api/v1/invitations")
+        self.assertEqual(response.status_code, 403)
+
+        response = self.post_json(f"/api/v1/invitations/{invitation.id}/revoke", {})
+        self.assertEqual(response.status_code, 403)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, Invitation.Status.ACTIVE)

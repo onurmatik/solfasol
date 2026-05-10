@@ -63,9 +63,9 @@ def invitations(request):
 @require_POST
 def revoke_invitation(request, pk):
     invitation = get_object_or_404(Invitation, pk=pk)
-    if not (request.user.is_staff or invitation.created_by_id == request.user.id):
+    if invitation.created_by_id != request.user.id:
         messages.error(request, "Bu davet linkini iptal etme yetkiniz yok.")
         return redirect("invitations")
     invitation.revoke(request.user)
     messages.success(request, "Davet linki iptal edildi.")
-    return redirect("ops_dashboard" if request.user.is_staff and request.POST.get("next") == "ops" else "invitations")
+    return redirect("invitations")

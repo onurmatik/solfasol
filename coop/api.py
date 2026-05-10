@@ -6,9 +6,9 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from solfasol.api_utils import DjangoValidationError, raise_bad_request, require_active_coop_member, require_staff
+from solfasol.api_utils import DjangoValidationError, require_active_coop_member, raise_bad_request
 
-from .models import DeliveryPoint, MemberOfferIntent, ProcurementOffer, Product, SupplierSource
+from .models import DeliveryPoint, MemberOfferIntent, ProcurementOffer, Product
 
 router = Router(tags=["coop"])
 
@@ -25,22 +25,6 @@ class DeliveryPointOut(Schema):
     name: str
     address: str
     description: str
-
-
-class SupplierSourceIn(Schema):
-    name: str
-    website: str = ""
-    contact_info: str = ""
-    notes: str = ""
-    is_active: bool = True
-
-
-class SupplierSourcePatch(Schema):
-    name: Optional[str] = None
-    website: Optional[str] = None
-    contact_info: Optional[str] = None
-    notes: Optional[str] = None
-    is_active: Optional[bool] = None
 
 
 class SupplierSourceOut(Schema):
@@ -64,30 +48,6 @@ class OfferIntentOut(Schema):
     quantity: Decimal
     delivery_point_id: Optional[int]
     note: str
-
-
-class ProcurementOfferIn(Schema):
-    title: str
-    product_id: int
-    source_id: int
-    unit_price: Decimal
-    target_quantity: Decimal
-    deadline: datetime
-    fulfillment_date: date
-    status: str = ProcurementOffer.Status.OPEN
-    admin_note: str = ""
-
-
-class ProcurementOfferPatch(Schema):
-    title: Optional[str] = None
-    product_id: Optional[int] = None
-    source_id: Optional[int] = None
-    unit_price: Optional[Decimal] = None
-    target_quantity: Optional[Decimal] = None
-    deadline: Optional[datetime] = None
-    fulfillment_date: Optional[date] = None
-    status: Optional[str] = None
-    admin_note: Optional[str] = None
 
 
 class ProcurementOfferOut(Schema):
@@ -215,75 +175,6 @@ def delete_offer_intent(request, intent_id: int):
     require_active_coop_member(request.user)
     intent = get_object_or_404(MemberOfferIntent.objects.select_related("offer"), pk=intent_id, member=request.user)
     if not intent.offer.accepts_intents:
-        raise HttpError(400, "Deadline geçtikten sonra niyet iptal edilemez.")
+        raise HttpError(400, "Deadline geçtikten sonra talep iptal edilemez.")
     intent.delete()
     return {"deleted": True}
-
-
-@router.post("/admin/supplier-sources", response=SupplierSourceOut)
-def admin_create_supplier_source(request, payload: SupplierSourceIn):
-    require_staff(request.user)
-    source = SupplierSource(**payload.dict())
-    try:
-        source.full_clean()
-    except DjangoValidationError as exc:
-        raise_bad_request(exc)
-    source.save()
-    return source_out(source)
-
-
-@router.patch("/admin/supplier-sources/{source_id}", response=SupplierSourceOut)
-def admin_update_supplier_source(request, source_id: int, payload: SupplierSourcePatch):
-    require_staff(request.user)
-    source = get_object_or_404(SupplierSource, pk=source_id)
-    for field, value in payload.dict(exclude_unset=True).items():
-        setattr(source, field, value)
-    try:
-        source.full_clean()
-    except DjangoValidationError as exc:
-        raise_bad_request(exc)
-    source.save()
-    return source_out(source)
-
-
-@router.post("/admin/offers", response=ProcurementOfferOut)
-def admin_create_offer(request, payload: ProcurementOfferIn):
-    require_staff(request.user)
-    product = get_object_or_404(Product, pk=payload.product_id)
-    source = get_object_or_404(SupplierSource, pk=payload.source_id)
-    offer = ProcurementOffer(
-        title=payload.title,
-        product=product,
-        source=source,
-        unit_price=payload.unit_price,
-        target_quantity=payload.target_quantity,
-        deadline=payload.deadline,
-        fulfillment_date=payload.fulfillment_date,
-        status=payload.status,
-        admin_note=payload.admin_note,
-    )
-    try:
-        offer.full_clean()
-    except DjangoValidationError as exc:
-        raise_bad_request(exc)
-    offer.save()
-    return offer_out(request, offer_queryset().get(pk=offer.pk))
-
-
-@router.patch("/admin/offers/{offer_id}", response=ProcurementOfferOut)
-def admin_update_offer(request, offer_id: int, payload: ProcurementOfferPatch):
-    require_staff(request.user)
-    offer = get_object_or_404(ProcurementOffer, pk=offer_id)
-    data = payload.dict(exclude_unset=True)
-    if "product_id" in data:
-        offer.product = get_object_or_404(Product, pk=data.pop("product_id"))
-    if "source_id" in data:
-        offer.source = get_object_or_404(SupplierSource, pk=data.pop("source_id"))
-    for field, value in data.items():
-        setattr(offer, field, value)
-    try:
-        offer.full_clean()
-    except DjangoValidationError as exc:
-        raise_bad_request(exc)
-    offer.save()
-    return offer_out(request, offer_queryset().get(pk=offer.pk))

@@ -11,7 +11,7 @@ from django.utils import timezone
 from common.test_helpers import CoopFixtureMixin
 from members.models import UserProfile
 
-from .models import MemberOfferIntent, ProcurementOffer, SupplierSource
+from .models import MemberOfferIntent, ProcurementOffer
 
 
 class DashboardTests(CoopFixtureMixin, TestCase):
@@ -121,38 +121,27 @@ class CoopApiTests(CoopFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    def test_staff_only_admin_source_and_offer_api(self):
-        self.client.login(username="member", password="pass12345")
-        response = self.post_json("/api/v1/admin/supplier-sources", {"name": "Üye Kaynağı"})
-        self.assertEqual(response.status_code, 403)
-
-        self.client.logout()
+    def test_admin_crud_api_routes_are_removed(self):
         self.client.login(username="staff", password="pass12345")
-        response = self.post_json(
-            "/api/v1/admin/supplier-sources",
-            {"name": "DEF Tarım", "website": "https://def.example", "contact_info": "info@def.example"},
-        )
-        self.assertEqual(response.status_code, 200, response.content)
-        source_id = response.json()["id"]
 
-        response = self.post_json(
-            "/api/v1/admin/offers",
-            {
-                "title": "DEF nohut",
-                "product_id": self.product.id,
-                "source_id": source_id,
-                "unit_price": "250.00",
-                "target_quantity": "20",
-                "deadline": (timezone.now() + timedelta(days=2)).isoformat(),
-                "fulfillment_date": "2026-05-20",
-            },
+        self.assertEqual(self.post_json("/api/v1/admin/supplier-sources", {"name": "DEF Tarım"}).status_code, 404)
+        self.assertEqual(self.patch_json(f"/api/v1/admin/supplier-sources/{self.source.id}", {"name": "Yeni"}).status_code, 404)
+        self.assertEqual(
+            self.post_json(
+                "/api/v1/admin/offers",
+                {
+                    "title": "DEF nohut",
+                    "product_id": self.product.id,
+                    "source_id": self.source.id,
+                    "unit_price": "250.00",
+                    "target_quantity": "20",
+                    "deadline": (timezone.now() + timedelta(days=2)).isoformat(),
+                    "fulfillment_date": "2026-05-20",
+                },
+            ).status_code,
+            404,
         )
-        self.assertEqual(response.status_code, 200, response.content)
-        offer_id = response.json()["id"]
-
-        response = self.patch_json(f"/api/v1/admin/offers/{offer_id}", {"status": ProcurementOffer.Status.CLOSED})
-        self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json()["status"], ProcurementOffer.Status.CLOSED)
+        self.assertEqual(self.patch_json(f"/api/v1/admin/offers/{self.offer.id}", {"status": ProcurementOffer.Status.CLOSED}).status_code, 404)
 
 
 class CoopViewTests(CoopFixtureMixin, TestCase):
@@ -186,43 +175,19 @@ class CoopViewTests(CoopFixtureMixin, TestCase):
         self.assertRedirects(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
         self.assertFalse(MemberOfferIntent.objects.exists())
 
-    def test_staff_can_create_source_and_close_offer_from_ops(self):
+    def test_ops_routes_are_removed(self):
         self.client.login(username="staff", password="pass12345")
 
         response = self.client.get(reverse("dashboard"))
-        self.assertNotContains(response, "Teklif yayınla")
+        self.assertNotContains(response, "Operasyon")
 
-        response = self.client.get(reverse("ops_dashboard"))
-        self.assertNotContains(response, "Yeni teklif")
-        self.assertNotContains(response, "Teklif yayınla")
-        self.assertContains(response, "Django admin")
+        response = self.client.get("/ops/")
+        self.assertEqual(response.status_code, 404)
 
-        response = self.client.post(
-            reverse("ops_dashboard"),
-            {"action": "source", "name": "GHI Kooperatif", "website": "", "contact_info": "", "notes": "", "is_active": "on"},
-        )
-        self.assertRedirects(response, reverse("ops_dashboard"))
-        SupplierSource.objects.get(name="GHI Kooperatif")
+        response = self.client.post("/ops/", {"action": "source", "name": "GHI Kooperatif"})
+        self.assertEqual(response.status_code, 404)
 
-        response = self.client.post(
-            reverse("ops_dashboard"),
-            {
-                "action": "offer",
-                "title": "GHI mercimek",
-                "product": self.product.id,
-                "source": self.source.id,
-                "unit_price": "150.00",
-                "target_quantity": "15",
-                "deadline": (timezone.now() + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M"),
-                "fulfillment_date": "2026-05-20",
-                "status": ProcurementOffer.Status.OPEN,
-                "admin_note": "",
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(ProcurementOffer.objects.filter(title="GHI mercimek").exists())
-
-        response = self.client.post(reverse("close_offer", kwargs={"pk": self.offer.pk}))
-        self.assertRedirects(response, reverse("ops_dashboard"))
+        response = self.client.post(f"/ops/offers/{self.offer.pk}/close/")
+        self.assertEqual(response.status_code, 404)
         self.offer.refresh_from_db()
-        self.assertEqual(self.offer.status, ProcurementOffer.Status.CLOSED)
+        self.assertEqual(self.offer.status, ProcurementOffer.Status.OPEN)

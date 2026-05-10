@@ -29,8 +29,6 @@ urlpatterns = [
     path('invitations/', member_views.invitations, name='invitations'),
     path('invitations/<int:pk>/revoke/', member_views.revoke_invitation, name='revoke_invitation'),
     path('signup/<str:token>/', member_views.signup, name='signup'),
-    path('ops/', coop_views.ops_dashboard, name='ops_dashboard'),
-    path('ops/offers/<int:pk>/close/', coop_views.close_offer, name='close_offer'),
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('api/v1/', api.urls),

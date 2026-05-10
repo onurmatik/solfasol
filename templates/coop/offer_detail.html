@@ -54,27 +54,27 @@
 
     <section class="panel">
       <div class="stack">
-        <h2>Benim niyetim</h2>
+        <h2>Benim talebim</h2>
         {% if offer.accepts_intents %}
           <form method="post" class="stack">
             {% csrf_token %}
             {{ form.as_div }}
             <div class="form-actions">
               {% if existing_intent %}
-                <button class="primary" type="submit">Niyeti güncelle</button>
+                <button class="primary" type="submit">Talebi güncelle</button>
               {% else %}
-                <button class="primary" type="submit">Niyet gir</button>
+                <button class="primary" type="submit">Talep gir</button>
               {% endif %}
             </div>
           </form>
           {% if existing_intent %}
             <form method="post" action="{% url 'delete_offer_intent' existing_intent.pk %}">
               {% csrf_token %}
-              <button class="danger" type="submit">Niyetimi iptal et</button>
+              <button class="danger" type="submit">Talebimi iptal et</button>
             </form>
           {% endif %}
         {% else %}
-          <div class="empty">Bu teklif artık yeni niyet veya değişiklik kabul etmiyor.</div>
+          <div class="empty">Bu teklif artık yeni talep veya değişiklik kabul etmiyor.</div>
         {% endif %}
       </div>
     </section>
@@ -102,7 +102,7 @@
                 <td>{{ intent.note|default:"-" }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="4">Henüz niyet yok.</td></tr>
+              <tr><td colspan="4">Henüz talep yok.</td></tr>
             {% endfor %}
           </tbody>
         </table>

@@ -51,9 +51,7 @@ def invitation_out(request, invitation):
 def list_invitations(request):
     if not can_create_invitations(request.user):
         raise HttpError(403, "Davet linki için aktif üye gerekir.")
-    queryset = Invitation.objects.annotate(accepted_count=Count("accepted_profiles"))
-    if not request.user.is_staff:
-        queryset = queryset.filter(created_by=request.user)
+    queryset = Invitation.objects.filter(created_by=request.user).annotate(accepted_count=Count("accepted_profiles"))
     return [invitation_out(request, invitation) for invitation in queryset]
 
 
@@ -69,7 +67,7 @@ def create_invitation(request, payload: InvitationIn):
 @router.post("/invitations/{invitation_id}/revoke", response=InvitationOut)
 def revoke_invitation(request, invitation_id: int):
     invitation = get_object_or_404(Invitation, pk=invitation_id)
-    if not (request.user.is_staff or invitation.created_by_id == request.user.id):
+    if invitation.created_by_id != request.user.id:
         raise HttpError(403, "Bu davet linkini iptal etme yetkiniz yok.")
     invitation.revoke(request.user)
     invitation.accepted_count = invitation.accepted_profiles.count()
