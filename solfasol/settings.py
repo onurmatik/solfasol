@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'calendar.apps.CalendarConfig',
     'members.apps.MembersConfig',
     'coop.apps.CoopConfig',
     'django.contrib.admin',

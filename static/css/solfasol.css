@@ -348,6 +348,36 @@ th {
   gap: 8px;
 }
 
+.agenda-list {
+  display: grid;
+  gap: 12px;
+}
+
+.agenda-item {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-panel);
+}
+
+.agenda-date {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.agenda-date strong {
+  font-size: 18px;
+}
+
+.agenda-date span {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
 @media (max-width: 760px) {
   .topbar-inner,
   .page {
@@ -366,6 +396,10 @@ th {
   }
 
   .copy-field {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-item {
     grid-template-columns: 1fr;
   }
 }

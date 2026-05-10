@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Takvim - Solfasol{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Calendar</p>
+      <h1>Takvim</h1>
+      <p class="muted">Sipariş deadline'ları, teslimatlar ve topluluk etkinlikleri.</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="stack">
+      <h2>Ajanda</h2>
+      <div class="agenda-list">
+        {% for entry in entries %}
+          <article class="agenda-item">
+            <div class="agenda-date">
+              <strong>{{ entry.starts_at|date:"d M" }}</strong>
+              <span>
+                {% if entry.is_all_day %}
+                  Tüm gün
+                {% else %}
+                  {{ entry.starts_at|date:"H:i" }}
+                {% endif %}
+              </span>
+            </div>
+            <div class="stack">
+              <div class="row between">
+                <div>
+                  <h3>
+                    {% if entry.offer_id and user.is_authenticated %}
+                      <a href="{{ entry.offer_url }}">{{ entry.title }}</a>
+                    {% else %}
+                      {{ entry.title }}
+                    {% endif %}
+                  </h3>
+                  <p class="muted">
+                    {{ entry.event_type_label }}
+                    {% if entry.ends_at %} · Bitiş: {{ entry.ends_at|date:"d M Y H:i" }}{% endif %}
+                  </p>
+                </div>
+                <span class="badge">{{ entry.event_type_label }}</span>
+              </div>
+              {% if entry.description %}
+                <p>{{ entry.description }}</p>
+              {% endif %}
+              {% if entry.location_name or entry.location_address or entry.link_url %}
+                <p class="muted">
+                  {% if entry.location_name %}{{ entry.location_name }}{% endif %}
+                  {% if entry.location_address %}{% if entry.location_name %} · {% endif %}{{ entry.location_address }}{% endif %}
+                  {% if entry.link_url %}{% if entry.location_name or entry.location_address %} · {% endif %}<a href="{{ entry.link_url }}">{{ entry.link_url }}</a>{% endif %}
+                </p>
+              {% endif %}
+            </div>
+          </article>
+        {% empty %}
+          <div class="empty">Takvimde yayınlanmış etkinlik yok.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

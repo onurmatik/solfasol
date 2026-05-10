@@ -13,6 +13,7 @@
         <div class="topbar-inner">
           <a class="brand" href="{% url 'dashboard' %}">Solfasol</a>
           <nav class="nav-links">
+            <a href="{% url 'calendar' %}">Takvim</a>
             {% if user.is_authenticated %}
               <a href="{% url 'dashboard' %}">Teklifler</a>
               <a href="{% url 'invitations' %}">Davetler</a>

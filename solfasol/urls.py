@@ -18,12 +18,14 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
+from calendar import views as calendar_views
 from coop import views as coop_views
 from members import views as member_views
 from solfasol.api import api
 
 urlpatterns = [
     path('', coop_views.dashboard, name='dashboard'),
+    path('calendar/', calendar_views.agenda, name='calendar'),
     path('offers/<int:pk>/', coop_views.offer_detail, name='offer_detail'),
     path('offer-intents/<int:pk>/delete/', coop_views.delete_offer_intent, name='delete_offer_intent'),
     path('invitations/', member_views.invitations, name='invitations'),
