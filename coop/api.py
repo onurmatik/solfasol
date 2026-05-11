@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from solfasol.api_utils import DjangoValidationError, require_active_coop_member, raise_bad_request
+from solfasol.api_utils import DjangoValidationError, raise_bad_request, require_active_user
 
 from .models import DeliveryPoint, MemberOfferIntent, ProcurementOffer, Product
 
@@ -120,12 +120,12 @@ def offer_queryset():
     return ProcurementOffer.objects.select_related("product", "product__category", "source").prefetch_related("intents")
 
 
-@router.get("/catalog/products", response=list[ProductOut])
+@router.get("/catalog/products", response=list[ProductOut], auth=None)
 def list_products(request):
     return [product_out(product) for product in Product.objects.filter(is_active=True).select_related("category")]
 
 
-@router.get("/delivery-points", response=list[DeliveryPointOut])
+@router.get("/delivery-points", response=list[DeliveryPointOut], auth=None)
 def list_delivery_points(request):
     return [
         DeliveryPointOut(id=point.id, name=point.name, address=point.address, description=point.description)
@@ -133,12 +133,12 @@ def list_delivery_points(request):
     ]
 
 
-@router.get("/offers", response=list[ProcurementOfferOut])
+@router.get("/offers", response=list[ProcurementOfferOut], auth=None)
 def list_offers(request):
     return [offer_out(request, offer) for offer in offer_queryset()]
 
 
-@router.get("/offers/{offer_id}", response=ProcurementOfferOut)
+@router.get("/offers/{offer_id}", response=ProcurementOfferOut, auth=None)
 def get_offer(request, offer_id: int):
     offer = get_object_or_404(offer_queryset(), pk=offer_id)
     return offer_out(request, offer)
@@ -146,7 +146,7 @@ def get_offer(request, offer_id: int):
 
 @router.post("/offers/{offer_id}/intent", response=OfferIntentOut)
 def upsert_offer_intent(request, offer_id: int, payload: OfferIntentIn):
-    require_active_coop_member(request.user)
+    require_active_user(request.user)
     offer = get_object_or_404(ProcurementOffer, pk=offer_id)
     delivery_point = None
     if payload.delivery_point_id:
@@ -172,7 +172,7 @@ def upsert_offer_intent(request, offer_id: int, payload: OfferIntentIn):
 
 @router.delete("/offer-intents/{intent_id}")
 def delete_offer_intent(request, intent_id: int):
-    require_active_coop_member(request.user)
+    require_active_user(request.user)
     intent = get_object_or_404(MemberOfferIntent.objects.select_related("offer"), pk=intent_id, member=request.user)
     if not intent.offer.accepts_intents:
         raise HttpError(400, "Deadline geçtikten sonra talep iptal edilemez.")

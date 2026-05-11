@@ -6,14 +6,9 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <p class="eyebrow">Üye paneli</p>
+      <p class="eyebrow">Kooperatif gündemi</p>
       <h1>Kooperatif gündemi</h1>
       <p class="muted">Takvim etkinlikleri ve aktif sipariş talepleri tek ekranda.</p>
-    </div>
-    <div class="row">
-      {% if can_create_invitations %}
-        <a class="button" href="{% url 'invitations' %}">Davet linkleri</a>
-      {% endif %}
     </div>
   </div>
 
@@ -124,7 +119,7 @@
               <div class="event-list-body">
                 <div class="row between">
                   <h3>
-                    {% if item.entry.offer_id and user.is_authenticated %}
+                    {% if item.entry.offer_id %}
                       <a href="{{ item.entry.offer_url }}">{{ item.entry.title }}</a>
                     {% else %}
                       {{ item.entry.title }}
@@ -156,7 +151,13 @@
           <div class="section-heading">
             <div>
               <h2>Aktif sipariş talepleri</h2>
-              <p class="muted">Talebiniz olan ürünler kart içinde işaretlenir.</p>
+              <p class="muted">
+                {% if user.is_authenticated %}
+                  Talebiniz olan ürünler kart içinde işaretlenir.
+                {% else %}
+                  Talep girmek için kayıt olun veya giriş yapın.
+                {% endif %}
+              </p>
             </div>
             <span class="badge">{{ active_offer_count }} aktif</span>
           </div>
@@ -192,8 +193,10 @@
                       <span class="badge success">Talebim var</span>
                       <strong class="mono">{{ intent.quantity }} {{ offer.product.unit }}</strong>
                     </div>
-                  {% else %}
+                  {% elif user.is_authenticated %}
                     <p class="muted small">Bu teklif için talebiniz bulunmuyor.</p>
+                  {% else %}
+                    <p class="muted small">Talep girmek için detay sayfasından giriş yapın veya kayıt olun.</p>
                   {% endif %}
 
                   <div class="offer-sidebar-meta">

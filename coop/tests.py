@@ -16,20 +16,17 @@ from .models import MemberOfferIntent, ProcurementOffer
 
 
 class DashboardTests(CoopFixtureMixin, TestCase):
-    def test_dashboard_requires_login_and_renders_offers(self):
+    def test_dashboard_is_public_and_renders_offers(self):
         CalendarEvent.objects.create(
             title="Kompost atölyesi",
             starts_at=timezone.now() + timedelta(days=1),
             status=CalendarEvent.Status.PUBLISHED,
         )
-
-        response = self.client.get(reverse("dashboard"))
-        self.assertEqual(response.status_code, 302)
-
         MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=Decimal("2"))
-        self.client.login(username="member", password="pass12345")
+
         response = self.client.get(reverse("dashboard"))
 
+        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Aktif sipariş talepleri")
         self.assertContains(response, "ABC Ziraat 5lt zeytinyağı")
         self.assertContains(response, "Aylık")
@@ -38,6 +35,12 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         self.assertContains(response, "Yaklaşan etkinlikler")
         self.assertContains(response, "Kompost atölyesi")
         self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertContains(response, "Talep girmek için")
+        self.assertNotContains(response, "Talebim var")
+
+        self.client.login(username="member", password="pass12345")
+        response = self.client.get(reverse("dashboard"))
+
         self.assertContains(response, "Talebim var")
         self.assertNotContains(response, "Son taleplerim")
 
@@ -104,7 +107,6 @@ class CoopApiTests(CoopFixtureMixin, TestCase):
         return self.client.patch(path, data=json.dumps(payload), content_type="application/json")
 
     def test_offer_list_and_detail_include_target_progress(self):
-        self.client.login(username="member", password="pass12345")
         MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=Decimal("3"))
 
         response = self.client.get("/api/v1/offers")
@@ -112,11 +114,22 @@ class CoopApiTests(CoopFixtureMixin, TestCase):
         payload = response.json()
         self.assertEqual(payload[0]["title"], "ABC Ziraat 5lt zeytinyağı")
         self.assertEqual(payload[0]["total_quantity"], "3")
-        self.assertEqual(payload[0]["current_user_intent"]["quantity"], "3.00")
+        self.assertIsNone(payload[0]["current_user_intent"])
 
         response = self.client.get(f"/api/v1/offers/{self.offer.id}")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["remaining_quantity"], "7.00")
+
+        self.client.login(username="member", password="pass12345")
+        response = self.client.get("/api/v1/offers")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]["current_user_intent"]["quantity"], "3.00")
+
+    def test_read_api_endpoints_are_public(self):
+        self.assertEqual(self.client.get("/api/v1/catalog/products").status_code, 200)
+        self.assertEqual(self.client.get("/api/v1/delivery-points").status_code, 200)
+        self.assertEqual(self.client.get("/api/v1/offers").status_code, 200)
+        self.assertEqual(self.client.get(f"/api/v1/offers/{self.offer.id}").status_code, 200)
 
     def test_member_offer_intent_api_upserts_and_deletes(self):
         self.client.login(username="member", password="pass12345")
@@ -139,6 +152,19 @@ class CoopApiTests(CoopFixtureMixin, TestCase):
         response = self.client.delete(f"/api/v1/offer-intents/{intent.id}")
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(MemberOfferIntent.objects.count(), 0)
+
+    def test_offer_intent_api_requires_login_but_not_member_profile(self):
+        response = self.post_json(f"/api/v1/offers/{self.offer.id}/intent", {"quantity": "1"})
+
+        self.assertNotEqual(response.status_code, 200)
+        self.assertFalse(MemberOfferIntent.objects.exists())
+
+        user = User.objects.create_user(username="plain", password="pass12345")
+        self.client.login(username="plain", password="pass12345")
+        response = self.post_json(f"/api/v1/offers/{self.offer.id}/intent", {"quantity": "2"})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(MemberOfferIntent.objects.filter(member=user, offer=self.offer, quantity=Decimal("2")).exists())
 
     def test_deadline_blocks_intent_api_changes(self):
         self.offer.deadline = timezone.now() - timedelta(minutes=1)
@@ -201,6 +227,34 @@ class CoopViewTests(CoopFixtureMixin, TestCase):
 
         response = self.client.post(reverse("delete_offer_intent", kwargs={"pk": intent.pk}))
         self.assertRedirects(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+        self.assertFalse(MemberOfferIntent.objects.exists())
+
+    def test_offer_detail_is_public_but_hides_participation_and_write_form(self):
+        MemberOfferIntent.objects.create(
+            member=self.member,
+            offer=self.offer,
+            quantity=Decimal("2"),
+            delivery_point=self.delivery_point,
+            note="özel not",
+        )
+
+        response = self.client.get(reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ABC Ziraat 5lt zeytinyağı")
+        self.assertContains(response, "Toplam")
+        self.assertContains(response, "2")
+        self.assertContains(response, "Katılım detayları için giriş yapın")
+        self.assertContains(response, "Talep girmek için")
+        self.assertNotContains(response, "member")
+        self.assertNotContains(response, "özel not")
+        self.assertNotContains(response, '<button class="primary" type="submit">Talep gir</button>', html=True)
+
+    def test_anonymous_offer_detail_post_redirects_to_login(self):
+        response = self.client.post(reverse("offer_detail", kwargs={"pk": self.offer.pk}), {"quantity": "2"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
         self.assertFalse(MemberOfferIntent.objects.exists())
 
     def test_ops_routes_are_removed(self):

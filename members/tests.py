@@ -6,15 +6,13 @@ from django.urls import reverse
 
 from common.test_helpers import CoopFixtureMixin
 
-from .models import Invitation
+from .models import UserProfile
 
 
-class InvitationTests(CoopFixtureMixin, TestCase):
-    def test_invitation_registers_active_coop_member_and_tracks_source(self):
-        invitation = Invitation.objects.create(created_by=self.inviter, label="WhatsApp")
-
+class SignupTests(CoopFixtureMixin, TestCase):
+    def test_open_signup_creates_active_user_profile_and_logs_in(self):
         response = self.client.post(
-            reverse("signup", kwargs={"token": invitation.token}),
+            reverse("signup"),
             {
                 "username": "newmember",
                 "email": "new@example.com",
@@ -26,90 +24,37 @@ class InvitationTests(CoopFixtureMixin, TestCase):
         self.assertRedirects(response, reverse("dashboard"))
         user = User.objects.get(username="newmember")
         self.assertTrue(user.is_active)
-        self.assertTrue(user.profile.is_coop_member)
-        self.assertEqual(user.profile.invited_by, self.inviter)
-        self.assertEqual(user.profile.invitation, invitation)
+        self.assertEqual(user.email, "new@example.com")
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())
+        self.assertEqual(int(self.client.session["_auth_user_id"]), user.id)
 
-    def test_revoked_invitation_cannot_register(self):
-        invitation = Invitation.objects.create(created_by=self.inviter)
-        invitation.revoke(self.inviter)
-
-        response = self.client.get(reverse("signup", kwargs={"token": invitation.token}))
-
-        self.assertEqual(response.status_code, 410)
-
-    def test_member_can_create_and_revoke_own_invitation(self):
-        self.client.login(username="member", password="pass12345")
-
-        response = self.client.post(reverse("invitations"), {"label": "Facebook"})
-        self.assertRedirects(response, reverse("invitations"))
-        invitation = Invitation.objects.get(created_by=self.member, label="Facebook")
-
-        response = self.client.post(reverse("revoke_invitation", kwargs={"pk": invitation.pk}))
-
-        self.assertRedirects(response, reverse("invitations"))
-        invitation.refresh_from_db()
-        self.assertEqual(invitation.status, Invitation.Status.REVOKED)
-
-    def test_staff_without_member_profile_cannot_manage_invitations_in_app(self):
-        invitation = Invitation.objects.create(created_by=self.member, label="Mahalle")
-        self.client.login(username="staff", password="pass12345")
-
-        response = self.client.get(reverse("invitations"))
-        self.assertRedirects(response, reverse("dashboard"))
-
-        response = self.client.post(reverse("revoke_invitation", kwargs={"pk": invitation.pk}))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], reverse("invitations"))
-        invitation.refresh_from_db()
-        self.assertEqual(invitation.status, Invitation.Status.ACTIVE)
+    def test_invitation_pages_are_removed(self):
+        self.assertEqual(self.client.get("/invitations/").status_code, 404)
+        self.assertEqual(self.client.get("/signup/legacy-token/").status_code, 404)
 
 
-class InvitationApiTests(CoopFixtureMixin, TestCase):
+class RegistrationApiTests(CoopFixtureMixin, TestCase):
     def post_json(self, path, payload):
         return self.client.post(path, data=json.dumps(payload), content_type="application/json")
 
-    def test_invitation_api_requires_active_link_for_registration(self):
-        invitation = Invitation.objects.create(created_by=self.inviter)
-
+    def test_register_api_creates_active_user_profile(self):
         response = self.post_json(
-            "/api/v1/invitations/register",
-            {"token": invitation.token, "username": "apiuser", "password": "pass12345"},
+            "/api/v1/register",
+            {"username": "apiuser", "password": "pass12345", "email": "api@example.com"},
         )
 
         self.assertEqual(response.status_code, 200, response.content)
-        user = User.objects.get(username="apiuser")
-        self.assertEqual(user.profile.invited_by, self.inviter)
-        self.assertTrue(user.profile.is_coop_member)
-
-        invitation.revoke(self.inviter)
-        response = self.post_json(
-            "/api/v1/invitations/register",
-            {"token": invitation.token, "username": "blocked", "password": "pass12345"},
-        )
-
-        self.assertEqual(response.status_code, 400)
-
-    def test_member_can_list_own_invitations(self):
-        Invitation.objects.create(created_by=self.member, label="Mahalle")
-        Invitation.objects.create(created_by=self.inviter, label="Başka")
-        self.client.login(username="member", password="pass12345")
-
-        response = self.client.get("/api/v1/invitations")
-
-        self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(len(payload), 1)
-        self.assertEqual(payload[0]["label"], "Mahalle")
+        user = User.objects.get(username="apiuser")
+        self.assertEqual(payload, {"id": user.id, "username": "apiuser"})
+        self.assertTrue(user.is_active)
+        self.assertEqual(user.email, "api@example.com")
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())
 
-    def test_staff_without_member_profile_cannot_use_invitation_api(self):
-        invitation = Invitation.objects.create(created_by=self.member, label="Mahalle")
-        self.client.login(username="staff", password="pass12345")
-
-        response = self.client.get("/api/v1/invitations")
-        self.assertEqual(response.status_code, 403)
-
-        response = self.post_json(f"/api/v1/invitations/{invitation.id}/revoke", {})
-        self.assertEqual(response.status_code, 403)
-        invitation.refresh_from_db()
-        self.assertEqual(invitation.status, Invitation.Status.ACTIVE)
+    def test_invitation_api_routes_are_removed(self):
+        self.assertEqual(self.client.get("/api/v1/invitations").status_code, 404)
+        self.assertEqual(
+            self.post_json("/api/v1/invitations/register", {"token": "x", "username": "u", "password": "pass12345"}).status_code,
+            404,
+        )
+        self.assertEqual(self.post_json("/api/v1/invitations/1/revoke", {}).status_code, 404)

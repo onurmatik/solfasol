@@ -1,23 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Davetle kayıt - Solfasol{% endblock %}
+{% block title %}Kayıt - Solfasol{% endblock %}
 
 {% block content %}
   <section class="panel" style="max-width: 540px; margin: 28px auto;">
     <div class="stack">
       <div>
-        <p class="eyebrow">Davetle kayıt</p>
-        <h1>Solfasol üyeliği oluştur</h1>
-        <p class="muted">
-          Davet eden: {{ invitation.created_by.get_username }}
-          {% if invitation.label %} · Kaynak: {{ invitation.label }}{% endif %}
-        </p>
+        <p class="eyebrow">Açık kayıt</p>
+        <h1>Solfasol hesabı oluştur</h1>
+        <p class="muted">Hesap oluşturduktan sonra tekliflere talep girebilirsiniz.</p>
       </div>
       <form method="post" class="stack">
         {% csrf_token %}
         {{ form.as_div }}
         <div class="form-actions">
-          <button class="primary" type="submit">Üyeliği aç</button>
+          <button class="primary" type="submit">Kayıt ol</button>
         </div>
       </form>
     </div>

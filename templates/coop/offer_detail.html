@@ -55,7 +55,16 @@
     <section class="panel">
       <div class="stack">
         <h2>Benim talebim</h2>
-        {% if offer.accepts_intents %}
+        {% if not can_write_intent %}
+          {% if offer.accepts_intents %}
+            <div class="empty">
+              Talep girmek için <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">giriş yapın</a>
+              veya <a href="{% url 'signup' %}">kayıt olun</a>.
+            </div>
+          {% else %}
+            <div class="empty">Bu teklif artık yeni talep veya değişiklik kabul etmiyor.</div>
+          {% endif %}
+        {% elif offer.accepts_intents %}
           <form method="post" class="stack">
             {% csrf_token %}
             {{ form.as_div }}
@@ -83,30 +92,34 @@
   <section class="panel" style="margin-top: 16px;">
     <div class="stack">
       <h2>Katılım listesi</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Üye</th>
-              <th>Miktar</th>
-              <th>Teslim</th>
-              <th>Not</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for intent in intents %}
+      {% if show_participation %}
+        <div class="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td>{{ intent.member.get_username }}</td>
-                <td>{{ intent.quantity }} {{ offer.product.unit }}</td>
-                <td>{{ intent.delivery_point.name|default:"-" }}</td>
-                <td>{{ intent.note|default:"-" }}</td>
+                <th>Üye</th>
+                <th>Miktar</th>
+                <th>Teslim</th>
+                <th>Not</th>
               </tr>
-            {% empty %}
-              <tr><td colspan="4">Henüz talep yok.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {% for intent in intents %}
+                <tr>
+                  <td>{{ intent.member.get_username }}</td>
+                  <td>{{ intent.quantity }} {{ offer.product.unit }}</td>
+                  <td>{{ intent.delivery_point.name|default:"-" }}</td>
+                  <td>{{ intent.note|default:"-" }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4">Henüz talep yok.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">Katılım detayları için giriş yapın. Toplam ilerleme yukarıda görünür.</div>
+      {% endif %}
     </div>
   </section>
 {% endblock %}

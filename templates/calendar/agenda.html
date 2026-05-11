@@ -31,7 +31,7 @@
               <div class="row between">
                 <div>
                   <h3>
-                    {% if entry.offer_id and user.is_authenticated %}
+                    {% if entry.offer_id %}
                       <a href="{{ entry.offer_url }}">{{ entry.title }}</a>
                     {% else %}
                       {{ entry.title }}

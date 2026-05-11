@@ -26,7 +26,7 @@ class CalendarEntryOut(Schema):
 
 def entry_out(request, entry):
     offer_url = ""
-    if entry.offer_id and request.user.is_authenticated:
+    if entry.offer_id:
         offer_url = entry.offer_url
     return CalendarEntryOut(
         id=entry.id,

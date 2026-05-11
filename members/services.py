@@ -8,10 +8,3 @@ def get_profile(user):
         return user.profile
     except UserProfile.DoesNotExist:
         return None
-
-
-def can_create_invitations(user):
-    if not getattr(user, "is_authenticated", False) or not user.is_active:
-        return False
-    profile = get_profile(user)
-    return profile is not None and profile.is_coop_member

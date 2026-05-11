@@ -1,8 +1,6 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from ninja.errors import HttpError
 
-from members.services import get_profile
-
 
 def raise_bad_request(exc):
     if hasattr(exc, "message_dict"):
@@ -13,10 +11,9 @@ def raise_bad_request(exc):
     raise HttpError(400, str(exc))
 
 
-def require_active_coop_member(user):
-    profile = get_profile(user)
-    if not user.is_authenticated or not user.is_active or profile is None or not profile.is_coop_member:
-        raise HttpError(403, "Aktif üye hesabı gerekir.")
+def require_active_user(user):
+    if not user.is_authenticated or not user.is_active:
+        raise HttpError(403, "Aktif hesap gerekir.")
 
 
-__all__ = ["DjangoValidationError", "raise_bad_request", "require_active_coop_member"]
+__all__ = ["DjangoValidationError", "raise_bad_request", "require_active_user"]

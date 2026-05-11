@@ -64,16 +64,14 @@ class CalendarViewTests(CoopFixtureMixin, TestCase):
         self.assertNotContains(response, "ABC Ziraat")
         self.assertNotContains(response, "Toplam / hedef")
 
-    def test_logged_in_member_can_open_offer_from_calendar(self):
-        self.client.login(username="member", password="pass12345")
-
+    def test_public_visitor_can_open_offer_from_calendar(self):
         response = self.client.get(reverse("calendar"))
 
         self.assertContains(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
 
 
 class CalendarApiTests(CoopFixtureMixin, TestCase):
-    def test_public_calendar_api_returns_summary_only_for_offer_entries(self):
+    def test_public_calendar_api_returns_summary_and_offer_links(self):
         CalendarEvent.objects.create(
             title="Forum",
             event_type=CalendarEvent.EventType.COMMUNITY,
@@ -92,13 +90,4 @@ class CalendarApiTests(CoopFixtureMixin, TestCase):
         self.assertIn("5lt zeytinyağı sipariş deadline", serialized)
         self.assertNotIn("1000.00", serialized)
         self.assertNotIn("ABC Ziraat", serialized)
-        self.assertTrue(all(entry["offer_url"] == "" for entry in offer_entries))
-
-    def test_authenticated_calendar_api_includes_offer_url(self):
-        self.client.login(username="member", password="pass12345")
-
-        response = self.client.get("/api/v1/calendar")
-
-        self.assertEqual(response.status_code, 200, response.content)
-        offer_entries = [entry for entry in response.json() if entry["source"] == "offer"]
         self.assertTrue(all(entry["offer_url"] == reverse("offer_detail", kwargs={"pk": self.offer.pk}) for entry in offer_entries))

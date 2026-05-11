@@ -2,13 +2,15 @@ import calendar as python_calendar
 from datetime import datetime, time, timedelta
 
 from django.contrib import messages
+from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from calendar.services import DELIVERY, ORDER_DEADLINE, list_calendar_entries
-from members.services import can_create_invitations, get_profile
+from members.services import get_profile
 
 from .forms import MemberOfferIntentForm
 from .models import MemberOfferIntent, ProcurementOffer
@@ -151,7 +153,6 @@ def _upcoming_entries(entries, limit=6):
     return _decorate_entries([entry for entry in entries if entry.starts_at >= today_start][:limit])
 
 
-@login_required
 def dashboard(request):
     active_offers = list(
         ProcurementOffer.objects.filter(status=ProcurementOffer.Status.OPEN)
@@ -159,12 +160,14 @@ def dashboard(request):
         .prefetch_related("intents")
         .order_by("deadline")
     )
-    user_intents = {
-        intent.offer_id: intent
-        for intent in MemberOfferIntent.objects.filter(member=request.user, offer_id__in=[offer.pk for offer in active_offers])
-        .select_related("delivery_point")
-        .order_by("-created_at")
-    }
+    user_intents = {}
+    if request.user.is_authenticated and request.user.is_active:
+        user_intents = {
+            intent.offer_id: intent
+            for intent in MemberOfferIntent.objects.filter(member=request.user, offer_id__in=[offer.pk for offer in active_offers])
+            .select_related("delivery_point")
+            .order_by("-created_at")
+        }
     calendar_view = request.GET.get("calendar_view")
     if calendar_view not in {"month", "week"}:
         calendar_view = "week"
@@ -192,20 +195,23 @@ def dashboard(request):
         "offer_cards": offer_cards,
         "profile": get_profile(request.user),
         "weekday_labels": WEEKDAY_LABELS,
-        "can_create_invitations": can_create_invitations(request.user),
     }
     return render(request, "coop/dashboard.html", context)
 
 
-@login_required
 def offer_detail(request, pk):
     offer = get_object_or_404(
         ProcurementOffer.objects.select_related("product", "source").prefetch_related("intents"),
         pk=pk,
     )
-    existing_intent = MemberOfferIntent.objects.filter(member=request.user, offer=offer).first()
+    can_write_intent = request.user.is_authenticated and request.user.is_active
+    existing_intent = None
+    if can_write_intent:
+        existing_intent = MemberOfferIntent.objects.filter(member=request.user, offer=offer).first()
 
     if request.method == "POST":
+        if not can_write_intent:
+            return redirect_to_login(request.get_full_path(), None, REDIRECT_FIELD_NAME)
         if not offer.accepts_intents:
             messages.error(request, "Bu teklif artık üye talebi kabul etmiyor.")
             return redirect("offer_detail", pk=offer.pk)
@@ -233,15 +239,18 @@ def offer_detail(request, pk):
     else:
         form = MemberOfferIntentForm(instance=existing_intent)
 
-    intents = offer.intents.select_related("member", "delivery_point").order_by("-created_at")
+    show_participation = can_write_intent
+    intents = offer.intents.select_related("member", "delivery_point").order_by("-created_at") if show_participation else []
     return render(
         request,
         "coop/offer_detail.html",
         {
             "offer": offer,
+            "can_write_intent": can_write_intent,
             "form": form,
             "existing_intent": existing_intent,
             "intents": intents,
+            "show_participation": show_participation,
         },
     )
 
