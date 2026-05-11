@@ -35,7 +35,10 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         self.assertContains(response, "Yaklaşan etkinlikler")
         self.assertContains(response, "Kompost atölyesi")
         self.assertContains(response, "5lt zeytinyağı sipariş deadline")
-        self.assertContains(response, "Talep girmek için")
+        self.assertContains(response, "solfasol-logo.svg")
+        self.assertContains(response, ">login<")
+        self.assertNotContains(response, "Takvim etkinlikleri ve aktif sipariş talepleri tek ekranda.")
+        self.assertNotContains(response, "Talep girmek için")
         self.assertNotContains(response, "Talebim var")
 
         self.client.login(username="member", password="pass12345")

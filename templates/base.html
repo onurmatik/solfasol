@@ -11,23 +11,18 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-inner">
-          <a class="brand" href="{% url 'dashboard' %}">Solfasol</a>
-          <nav class="nav-links">
-            <a href="{% url 'dashboard' %}">Teklifler</a>
-            <a href="{% url 'calendar' %}">Takvim</a>
+          <a class="brand" href="{% url 'dashboard' %}" aria-label="Solfasol Kooperatifi">
+            <img class="brand-logo" src="{% static 'img/solfasol-logo.svg' %}" alt="Solfasol Kooperatifi">
+          </a>
+          <div class="account-actions">
             {% if user.is_authenticated %}
-              {% if user.is_staff %}
-                <a href="{% url 'admin:index' %}">Admin</a>
-              {% endif %}
-              <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button class="button linklike" type="submit">Çıkış</button>
-              </form>
+              <span class="user-avatar" title="{{ user.get_username }}" aria-label="{{ user.get_username }}">
+                {{ user.get_full_name|default:user.get_username|slice:":1"|upper }}
+              </span>
             {% else %}
-              <a href="{% url 'login' %}">Giriş</a>
-              <a href="{% url 'signup' %}">Kayıt</a>
+              <a class="button login-button" href="{% url 'login' %}">Giriş</a>
             {% endif %}
-          </nav>
+          </div>
         </div>
       </header>
 

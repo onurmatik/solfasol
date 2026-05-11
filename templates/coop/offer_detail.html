@@ -5,7 +5,6 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <p class="eyebrow">Teklif</p>
       <h1>{{ offer.title }}</h1>
       <p class="muted">{{ offer.source.name }} · {{ offer.product.name }} · Gerçekleşme: {{ offer.fulfillment_date|date:"d M Y" }}</p>
     </div>
@@ -118,7 +117,7 @@
           </table>
         </div>
       {% else %}
-        <div class="empty">Katılım detayları için giriş yapın. Toplam ilerleme yukarıda görünür.</div>
+        <div class="empty">Katılım detayları için giriş yapın.</div>
       {% endif %}
     </div>
   </section>
