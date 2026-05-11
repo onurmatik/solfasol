@@ -9,10 +9,10 @@
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
-        <div class="topbar-inner">
+      <main class="page">
+        <div class="brand-row">
           <a class="brand" href="{% url 'dashboard' %}" aria-label="Solfasol Kooperatifi">
-            <img class="brand-logo" src="{% static 'img/solfasol-logo.svg' %}" alt="Solfasol Kooperatifi">
+            <img class="brand-logo" src="{% static 'img/solfasol-logo.png' %}" alt="Solfasol Kooperatifi">
           </a>
           <div class="account-actions">
             {% if user.is_authenticated %}
@@ -20,13 +20,11 @@
                 {{ user.get_full_name|default:user.get_username|slice:":1"|upper }}
               </span>
             {% else %}
-              <a class="button login-button" href="{% url 'login' %}">Giriş</a>
+              <a class="button login-button" href="{% url 'login' %}">login</a>
             {% endif %}
           </div>
         </div>
-      </header>
 
-      <main class="page">
         {% if messages %}
           <div class="messages">
             {% for message in messages %}

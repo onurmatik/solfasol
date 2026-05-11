@@ -4,7 +4,7 @@ Solfasol uses Django templates with shared CSS classes from `static/css/solfasol
 
 ## Shared Primitives
 
-- `.topbar`, `.topbar-inner`, `.brand`, `.nav-links`: global navigation in `templates/base.html`.
+- `.brand-row`, `.brand`, `.brand-logo`, `.account-actions`, `.user-avatar`: quiet page masthead in `templates/base.html`.
 - `.page`: centered main content wrapper, max width 1180px.
 - `.page-header`: page title/action header.
 - `.panel`: primary surface for page sections.
@@ -22,7 +22,7 @@ Solfasol uses Django templates with shared CSS classes from `static/css/solfasol
 
 ## Icons And Assets
 
-There are no local logo image or icon assets. The brand is text-only: `Solfasol`.
+The brand uses `static/img/solfasol-logo.png` with the subtitle `Kooperatifi`.
 
 ## Current Landing Page Components
 

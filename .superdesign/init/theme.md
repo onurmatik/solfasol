@@ -38,6 +38,7 @@
 
 - 4px/8px spacing grid.
 - Max content width: 1180px.
+- Brand/account row is integrated into the page content, not rendered as a fixed or full-width top navbar.
 - Card/panel radius: 8px maximum.
 - Utility-first, operational, data-dense design.
 - No gradients, image hero sections, decorative blobs, or marketing-style composition.

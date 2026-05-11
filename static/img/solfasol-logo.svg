@@ -105,8 +105,8 @@
       .cls-25 {
         fill: #1d1d1b;
         font-family: Montserrat-Bold, Montserrat;
-        font-size: 20.59px;
-        font-weight: 700;
+        font-size: 32px;
+        font-weight: 800;
       }
 
       .cls-26 {
@@ -140,7 +140,7 @@
       <path class="cls-4" d="M685.47,153.49c-28.51,0-51.62-23.11-51.62-51.62s23.11-51.62,51.62-51.62,51.62,23.11,51.62,51.62-23.11,51.62-51.62,51.62M685.47,135.81c19.2,0,34.76-15.2,34.76-33.95s-15.56-33.95-34.76-33.95-34.76,15.2-34.76,33.95,15.56,33.95,34.76,33.95"/>
       <polygon class="cls-4" points="747.39 51.48 747.39 152.34 806.96 152.34 806.96 136.28 763.08 136.28 763.08 51.48 747.39 51.48"/>
     </g>
-    <text class="cls-25" x="482.6" y="191.07" text-anchor="middle">Kooperatifi</text>
+    <text class="cls-25" x="482.6" y="187.07" text-anchor="middle">Kooperatifi</text>
     <rect class="cls-3" x="154.31" y="201.52" width="652.65" height="4.34"/>
   </g>
 </svg>

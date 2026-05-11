@@ -32,7 +32,7 @@ Adapt the Superdesign "Chrome Extension Landing Page" system-interface style int
 
 ## Layout
 - Use a strict 4px/8px spacing grid.
-- Top navigation is compact, full-width, and utility focused.
+- Brand/account navigation is a quiet page masthead, embedded inside the content width rather than a full-width top bar.
 - Pages use constrained content width around 1180px with responsive single-column collapse.
 - Use panels and tables for repeated operational information.
 - Cards are limited to repeated entities and operational summaries, with max 8px radius.
