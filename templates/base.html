@@ -20,7 +20,7 @@
                 {{ user.get_full_name|default:user.get_username|slice:":1"|upper }}
               </span>
             {% else %}
-              <a class="button login-button" href="{% url 'login' %}">login</a>
+              <a class="button login-button" href="{% url 'login' %}">Giriş</a>
             {% endif %}
           </div>
         </div>
