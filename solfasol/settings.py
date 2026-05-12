@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -18,6 +19,15 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
+
+
+def prefer_project_calendar_package():
+    module = sys.modules.get('calendar')
+    if module is not None and not hasattr(module, '__path__'):
+        del sys.modules['calendar']
+
+
+prefer_project_calendar_package()
 
 
 def env_bool(*names, default=False):
