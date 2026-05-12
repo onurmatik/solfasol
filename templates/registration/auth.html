@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if active_auth_tab == "signup" %}Kayıt - Solfasol{% else %}Giriş - Solfasol{% endif %}
+{% endblock %}
+
+{% block content %}
+  <section class="panel auth-panel">
+    <nav class="auth-tabs" aria-label="Hesap işlemleri">
+      <a
+        class="auth-tab{% if active_auth_tab == 'login' %} active{% endif %}"
+        href="{% url 'login' %}"
+        {% if active_auth_tab == "login" %}aria-current="page"{% endif %}
+      >
+        Giriş yap
+      </a>
+      <a
+        class="auth-tab{% if active_auth_tab == 'signup' %} active{% endif %}"
+        href="{% url 'signup' %}"
+        {% if active_auth_tab == "signup" %}aria-current="page"{% endif %}
+      >
+        Kayıt ol
+      </a>
+    </nav>
+
+    <div class="stack">
+      <div>
+        {% if active_auth_tab == "signup" %}
+          <h1>Solfasol hesabı oluştur</h1>
+          <p class="muted">Parolanızı belirlemeniz için e-posta adresinize bir bağlantı göndereceğiz.</p>
+        {% else %}
+          <h1>Solfasol giriş</h1>
+          <p class="muted">Kullanıcı adınız veya e-posta adresinizle giriş yapın.</p>
+        {% endif %}
+      </div>
+
+      <form method="post" class="stack">
+        {% csrf_token %}
+        {{ form.as_div }}
+        <div class="form-actions">
+          {% if active_auth_tab == "signup" %}
+            <button class="primary" type="submit">Kayıt bağlantısı gönder</button>
+          {% else %}
+            <button class="primary" type="submit">Giriş yap</button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

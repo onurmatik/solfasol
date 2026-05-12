@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Kaydı tamamla - Solfasol{% endblock %}
+
+{% block content %}
+  <section class="panel" style="max-width: 540px; margin: 28px auto;">
+    <div class="stack">
+      {% if invalid_link %}
+        <div>
+          <h1>Bağlantı geçersiz</h1>
+          <p class="muted">Bu kayıt bağlantısı kullanılmış, süresi dolmuş veya hatalı olabilir.</p>
+        </div>
+        <div class="form-actions">
+          <a class="button primary" href="{% url 'signup' %}">Yeni bağlantı al</a>
+        </div>
+      {% else %}
+        <div>
+          <h1>Parolanızı belirleyin</h1>
+          <p class="muted">Hesabınızı etkinleştirmek için bir parola seçin.</p>
+        </div>
+        <form method="post" class="stack">
+          {% csrf_token %}
+          {{ form.as_div }}
+          <div class="form-actions">
+            <button class="primary" type="submit">Kaydı tamamla</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}
