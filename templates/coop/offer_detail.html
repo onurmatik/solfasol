@@ -1,22 +1,34 @@
 {% extends "base.html" %}
 
-{% block title %}{{ offer.title }} - Solfasol{% endblock %}
+{% block title %}{{ offer.display_title }} - Solfasol{% endblock %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <h1>{{ offer.title }}</h1>
-      <p class="muted">{{ offer.source.name }} · {{ offer.product.name }} · Gerçekleşme: {{ offer.fulfillment_date|date:"d M Y" }}</p>
+      <h1>{{ offer.display_title }}</h1>
+      <p class="muted">
+        {{ offer.source.name }} · {{ offer.product.name }} ·
+        {% if offer.fulfillment_date %}
+          Gerçekleşme: {{ offer.fulfillment_date|date:"d M Y" }}
+        {% else %}
+          Gerçekleşme tarihi sonra eklenecek
+        {% endif %}
+      </p>
     </div>
-    {% if offer.is_successful %}
-      <span class="badge success">Başarılı</span>
-    {% elif offer.deadline_passed %}
-      <span class="badge warning">Deadline geçti</span>
-    {% elif offer.status == "closed" %}
-      <span class="badge danger">Kapandı</span>
-    {% else %}
-      <span class="badge success">Açık</span>
-    {% endif %}
+    <div class="row">
+      {% if offer.discount_rate %}
+        <span class="badge info">You save {{ offer.discount_rate }}%</span>
+      {% endif %}
+      {% if offer.is_successful %}
+        <span class="badge success">Başarılı</span>
+      {% elif offer.deadline_passed %}
+        <span class="badge warning">Deadline geçti</span>
+      {% elif offer.status == "closed" %}
+        <span class="badge danger">Kapandı</span>
+      {% else %}
+        <span class="badge success">Açık</span>
+      {% endif %}
+    </div>
   </div>
 
   <div class="grid two">
@@ -41,12 +53,19 @@
         {% if offer.admin_note %}
           <div class="message">{{ offer.admin_note }}</div>
         {% endif %}
-        {% if offer.source.website or offer.source.contact_info %}
-          <p class="muted">
-            Kaynak:
-            {% if offer.source.website %}<a href="{{ offer.source.website }}">{{ offer.source.website }}</a>{% endif %}
-            {% if offer.source.contact_info %} · {{ offer.source.contact_info }}{% endif %}
-          </p>
+        {% if offer.product.reference_url or offer.source.website or offer.source.contact_info %}
+          <div class="stack compact">
+            {% if offer.product.reference_url %}
+              <p class="muted">Ürün referansı: <a href="{{ offer.product.reference_url }}">{{ offer.product.reference_url }}</a></p>
+            {% endif %}
+            {% if offer.source.website or offer.source.contact_info %}
+              <p class="muted">
+                Tedarikçi:
+                {% if offer.source.website %}<a href="{{ offer.source.website }}">{{ offer.source.website }}</a>{% endif %}
+                {% if offer.source.contact_info %} · {{ offer.source.contact_info }}{% endif %}
+              </p>
+            {% endif %}
+          </div>
         {% endif %}
       </div>
     </section>

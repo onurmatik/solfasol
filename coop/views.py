@@ -153,6 +153,28 @@ def _upcoming_entries(entries, limit=6):
     return _decorate_entries([entry for entry in entries if entry.starts_at >= today_start][:limit])
 
 
+def _save_member_offer_intent(request, offer, form):
+    intent = form.save(commit=False)
+    intent.member = request.user
+    intent.offer = offer
+    try:
+        intent.full_clean(validate_unique=False)
+    except Exception as exc:
+        form.add_error(None, exc)
+        return False
+
+    MemberOfferIntent.objects.update_or_create(
+        member=request.user,
+        offer=offer,
+        defaults={
+            "quantity": intent.quantity,
+            "delivery_point": intent.delivery_point,
+            "note": intent.note,
+        },
+    )
+    return True
+
+
 def dashboard(request):
     active_offers = list(
         ProcurementOffer.objects.filter(status=ProcurementOffer.Status.OPEN)
@@ -168,13 +190,22 @@ def dashboard(request):
             .select_related("delivery_point")
             .order_by("-created_at")
         }
+
     calendar_view = request.GET.get("calendar_view")
     if calendar_view not in {"month", "week"}:
         calendar_view = "week"
     calendar_anchor = _parse_anchor_date(request.GET.get("date"))
     calendar_entries = list_calendar_entries()
     prev_calendar_date, next_calendar_date = _calendar_navigation(calendar_anchor, calendar_view)
-    offer_cards = [{"offer": offer, "intent": user_intents.get(offer.pk)} for offer in active_offers]
+    offer_cards = []
+    for offer in active_offers:
+        intent = user_intents.get(offer.pk)
+        offer_cards.append(
+            {
+                "offer": offer,
+                "intent": intent,
+            }
+        )
     week_start = calendar_anchor - timedelta(days=calendar_anchor.weekday())
     week_end = week_start + timedelta(days=6)
     calendar_week_days = _build_week_cards(calendar_entries, calendar_anchor)
@@ -217,23 +248,7 @@ def offer_detail(request, pk):
             return redirect("offer_detail", pk=offer.pk)
         form = MemberOfferIntentForm(request.POST, instance=existing_intent)
         if form.is_valid():
-            intent = form.save(commit=False)
-            intent.member = request.user
-            intent.offer = offer
-            try:
-                intent.full_clean(validate_unique=False)
-            except Exception as exc:
-                form.add_error(None, exc)
-            else:
-                MemberOfferIntent.objects.update_or_create(
-                    member=request.user,
-                    offer=offer,
-                    defaults={
-                        "quantity": intent.quantity,
-                        "delivery_point": intent.delivery_point,
-                        "note": intent.note,
-                    },
-                )
+            if _save_member_offer_intent(request, offer, form):
                 messages.success(request, "Teklif talebiniz kaydedildi.")
                 return redirect("offer_detail", pk=offer.pk)
     else:

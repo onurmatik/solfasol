@@ -70,7 +70,7 @@ def _manual_entry(event):
 
 def _offer_entries(offer):
     title = offer.product.name
-    return [
+    entries = [
         CalendarEntry(
             id=f"offer-{offer.id}-deadline",
             source="offer",
@@ -82,18 +82,22 @@ def _offer_entries(offer):
             is_all_day=False,
             offer_id=offer.id,
         ),
-        CalendarEntry(
-            id=f"offer-{offer.id}-delivery",
-            source="offer",
-            title=f"{title} teslimat",
-            event_type=DELIVERY,
-            event_type_label=EVENT_TYPE_LABELS[DELIVERY],
-            starts_at=_date_to_datetime(offer.fulfillment_date),
-            ends_at=None,
-            is_all_day=True,
-            offer_id=offer.id,
-        ),
     ]
+    if offer.fulfillment_date:
+        entries.append(
+            CalendarEntry(
+                id=f"offer-{offer.id}-delivery",
+                source="offer",
+                title=f"{title} teslimat",
+                event_type=DELIVERY,
+                event_type_label=EVENT_TYPE_LABELS[DELIVERY],
+                starts_at=_date_to_datetime(offer.fulfillment_date),
+                ends_at=None,
+                is_all_day=True,
+                offer_id=offer.id,
+            )
+        )
+    return entries
 
 
 def list_calendar_entries():

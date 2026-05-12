@@ -1,8 +1,6 @@
-from decimal import Decimal
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
@@ -35,6 +33,10 @@ class Product(TimeStampedModel):
     category = models.ForeignKey(ProductCategory, on_delete=models.PROTECT, related_name="products")
     name = models.CharField(max_length=160)
     unit = models.CharField(max_length=20, choices=Unit.choices, default=Unit.KG)
+    reference_url = models.URLField(
+        blank=True,
+        help_text="Ürün hakkında internette referans verilebilecek sayfa URL'si.",
+    )
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -65,7 +67,10 @@ class DeliveryPoint(TimeStampedModel):
 
 class SupplierSource(TimeStampedModel):
     name = models.CharField(max_length=160, unique=True)
-    website = models.URLField(blank=True)
+    website = models.URLField(
+        blank=True,
+        help_text="Tedarikçinin web sitesi veya sosyal medya profil URL'si.",
+    )
     contact_info = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
@@ -84,13 +89,29 @@ class ProcurementOffer(TimeStampedModel):
         OPEN = "open", "Açık"
         CLOSED = "closed", "Kapandı"
 
-    title = models.CharField(max_length=160)
+    title = models.CharField(
+        max_length=160,
+        blank=True,
+        help_text="Opsiyonel başlık. Boş bırakılırsa tedarikçi ve ürün adıyla gösterilir.",
+    )
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="procurement_offers")
     source = models.ForeignKey(SupplierSource, on_delete=models.PROTECT, related_name="procurement_offers")
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
-    target_quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
-    deadline = models.DateTimeField()
-    fulfillment_date = models.DateField()
+    unit_price = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    target_quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    deadline = models.DateTimeField(
+        help_text="Üyelerin bu teklif için talep girip değiştirebileceği son tarih ve saat.",
+    )
+    fulfillment_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Teklif gerçekleşirse teslimatın veya fulfillment'ın yapılacağı tarih. Bilinmiyorsa boş bırakılabilir.",
+    )
+    discount_rate = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text="Opsiyonel indirim oranı. Varsa UI'da 'You save 30%' gibi gösterilir.",
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     admin_note = models.TextField(blank=True)
 
@@ -100,7 +121,18 @@ class ProcurementOffer(TimeStampedModel):
         verbose_name_plural = "Teklifler"
 
     def __str__(self):
-        return self.title
+        return self.display_title
+
+    @property
+    def display_title(self):
+        if self.title:
+            return self.title
+        parts = []
+        if self.source_id:
+            parts.append(self.source.name)
+        if self.product_id:
+            parts.append(self.product.name)
+        return "Teklif" if not parts else " ".join(parts)
 
     @property
     def is_open(self):
@@ -117,12 +149,12 @@ class ProcurementOffer(TimeStampedModel):
     @property
     def total_quantity(self):
         total = self.intents.aggregate(total=Sum("quantity"))["total"]
-        return total or Decimal("0")
+        return total or 0
 
     @property
     def remaining_quantity(self):
         remaining = self.target_quantity - self.total_quantity
-        return max(remaining, Decimal("0"))
+        return max(remaining, 0)
 
     @property
     def is_successful(self):
@@ -133,6 +165,10 @@ class ProcurementOffer(TimeStampedModel):
             raise ValidationError("Pasif ürün için teklif verilemez.")
         if self.source_id and not self.source.is_active:
             raise ValidationError("Pasif tedarikçi kaynağı için teklif yayınlanamaz.")
+        if self.fulfillment_date and self.deadline:
+            deadline_date = timezone.localtime(self.deadline).date() if timezone.is_aware(self.deadline) else self.deadline.date()
+            if self.fulfillment_date < deadline_date:
+                raise ValidationError({"fulfillment_date": "Fulfillment date deadline'dan önce olamaz."})
 
 
 class MemberOfferIntent(TimeStampedModel):
@@ -145,7 +181,7 @@ class MemberOfferIntent(TimeStampedModel):
         blank=True,
         related_name="offer_intents",
     )
-    quantity = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     note = models.TextField(blank=True)
 
     class Meta:

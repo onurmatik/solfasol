@@ -19,9 +19,9 @@ class ProductCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "unit", "is_active")
+    list_display = ("name", "category", "unit", "reference_url", "is_active")
     list_filter = ("category", "unit", "is_active")
-    search_fields = ("name", "category__name")
+    search_fields = ("name", "category__name", "reference_url")
 
 
 @admin.register(DeliveryPoint)
@@ -41,19 +41,24 @@ class SupplierSourceAdmin(admin.ModelAdmin):
 @admin.register(ProcurementOffer)
 class ProcurementOfferAdmin(admin.ModelAdmin):
     list_display = (
-        "title",
+        "offer_title",
         "product",
         "source",
         "unit_price",
         "target_quantity",
         "total_quantity",
+        "discount_rate",
         "status",
         "deadline",
         "fulfillment_date",
     )
-    list_filter = ("status", "source", "product", "deadline", "fulfillment_date")
+    list_filter = ("status", "source", "product", "discount_rate", "deadline", "fulfillment_date")
     search_fields = ("title", "product__name", "source__name", "admin_note")
     autocomplete_fields = ("product", "source")
+
+    @admin.display(description="Başlık", ordering="title")
+    def offer_title(self, obj):
+        return obj.display_title
 
 
 @admin.register(MemberOfferIntent)

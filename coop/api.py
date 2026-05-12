@@ -1,5 +1,4 @@
 from datetime import date, datetime
-from decimal import Decimal
 from typing import Optional
 
 from django.shortcuts import get_object_or_404
@@ -18,6 +17,7 @@ class ProductOut(Schema):
     name: str
     unit: str
     category: str
+    reference_url: str
 
 
 class DeliveryPointOut(Schema):
@@ -37,7 +37,7 @@ class SupplierSourceOut(Schema):
 
 
 class OfferIntentIn(Schema):
-    quantity: Decimal
+    quantity: int
     delivery_point_id: Optional[int] = None
     note: str = ""
 
@@ -45,7 +45,7 @@ class OfferIntentIn(Schema):
 class OfferIntentOut(Schema):
     id: int
     offer_id: int
-    quantity: Decimal
+    quantity: int
     delivery_point_id: Optional[int]
     note: str
 
@@ -55,21 +55,28 @@ class ProcurementOfferOut(Schema):
     title: str
     product: ProductOut
     source: SupplierSourceOut
-    unit_price: Decimal
-    target_quantity: Decimal
+    unit_price: int
+    target_quantity: int
     deadline: datetime
-    fulfillment_date: date
+    fulfillment_date: Optional[date] = None
+    discount_rate: Optional[int] = None
     status: str
     admin_note: str
-    total_quantity: Decimal
-    remaining_quantity: Decimal
+    total_quantity: int
+    remaining_quantity: int
     is_successful: bool
     accepts_intents: bool
     current_user_intent: Optional[OfferIntentOut] = None
 
 
 def product_out(product):
-    return ProductOut(id=product.id, name=product.name, unit=product.unit, category=product.category.name)
+    return ProductOut(
+        id=product.id,
+        name=product.name,
+        unit=product.unit,
+        category=product.category.name,
+        reference_url=product.reference_url,
+    )
 
 
 def source_out(source):
@@ -99,13 +106,14 @@ def offer_out(request, offer):
         current_user_intent = next((intent for intent in offer.intents.all() if intent.member_id == request.user.id), None)
     return ProcurementOfferOut(
         id=offer.id,
-        title=offer.title,
+        title=offer.display_title,
         product=product_out(offer.product),
         source=source_out(offer.source),
         unit_price=offer.unit_price,
         target_quantity=offer.target_quantity,
         deadline=offer.deadline,
         fulfillment_date=offer.fulfillment_date,
+        discount_rate=offer.discount_rate,
         status=offer.status,
         admin_note=offer.admin_note,
         total_quantity=offer.total_quantity,

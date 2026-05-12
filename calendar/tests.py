@@ -69,6 +69,16 @@ class CalendarViewTests(CoopFixtureMixin, TestCase):
 
         self.assertContains(response, reverse("offer_detail", kwargs={"pk": self.offer.pk}))
 
+    def test_offer_without_fulfillment_date_only_lists_deadline(self):
+        self.offer.fulfillment_date = None
+        self.offer.save()
+
+        response = self.client.get(reverse("calendar"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertNotContains(response, "5lt zeytinyağı teslimat")
+
 
 class CalendarApiTests(CoopFixtureMixin, TestCase):
     def test_public_calendar_api_returns_summary_and_offer_links(self):
