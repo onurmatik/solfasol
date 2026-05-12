@@ -10,22 +10,78 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
+
+
+def env_bool(*names, default=False):
+    for name in names:
+        raw_value = os.getenv(name)
+        if raw_value is None:
+            continue
+        return raw_value.strip().lower() in {'1', 'true', 'yes', 'on'}
+    return default
+
+
+def env_list(*names, default=None):
+    for name in names:
+        raw_value = os.getenv(name)
+        if raw_value is None:
+            continue
+        values = [value.strip() for value in raw_value.split(',') if value.strip()]
+        if values:
+            return values
+    return default or []
+
+
+def normalize_path_prefix(raw_value, default):
+    normalized = (raw_value or '').strip().strip('/')
+    if not normalized:
+        normalized = default.strip().strip('/')
+    return f'{normalized}/'
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-*qj9dp95b0)#5)(%je6bs9yhq7f2&a(bdf6*3bwhdgk1%jujn('
+SECRET_KEY = os.getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-*qj9dp95b0)#5)(%je6bs9yhq7f2&a(bdf6*3bwhdgk1%jujn(',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', 'DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list(
+    'DJANGO_ALLOWED_HOSTS',
+    'ALLOWED_HOSTS',
+    default=['localhost', '127.0.0.1', '[::1]', 'solfasol.org', 'www.solfasol.org'],
+)
+CSRF_TRUSTED_ORIGINS = env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    default=['https://solfasol.org', 'https://www.solfasol.org'],
+)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+ADMIN_URL_PATH = normalize_path_prefix(os.getenv('DJANGO_ADMIN_URL_PATH'), 'admin')
+
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'hello@solfasol.org')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
+
+AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+AWS_SES_REGION_NAME = os.getenv('AWS_SES_REGION_NAME', AWS_DEFAULT_REGION)
+AWS_SES_ACCESS_KEY_ID = os.getenv('AWS_SES_ACCESS_KEY_ID') or os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SES_SECRET_ACCESS_KEY = os.getenv('AWS_SES_SECRET_ACCESS_KEY') or os.getenv('AWS_SECRET_ACCESS_KEY')
 
 
 # Application definition
@@ -40,6 +96,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_ses',
 ]
 
 MIDDLEWARE = [
@@ -117,8 +174,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

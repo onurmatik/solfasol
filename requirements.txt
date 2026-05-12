@@ -1,2 +1,8 @@
 Django==6.0.2
 django-ninja==1.6.2
+django-ses[events]
+python-dotenv
+requests
+fabric
+PyJWT[crypto]
+gunicorn

@@ -2,9 +2,10 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -53,17 +54,14 @@ def send_signup_completion_email(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     completion_url = request.build_absolute_uri(reverse("complete_signup", args=[uid, token]))
-    send_mail(
-        subject="Solfasol hesabınızı tamamlayın",
-        message=(
-            f"Merhaba {user.first_name or user.username},\n\n"
-            "Solfasol hesabınızı tamamlamak için aşağıdaki bağlantıdan parolanızı belirleyin:\n"
-            f"{completion_url}\n\n"
-            "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
-        ),
-        from_email=None,
-        recipient_list=[user.email],
+    context = {"completion_url": completion_url, "user": user}
+    message = EmailMultiAlternatives(
+        subject="Solfasol kaydınızı tamamlayın",
+        body=render_to_string("members/emails/signup_completion.txt", context),
+        to=[user.email],
     )
+    message.attach_alternative(render_to_string("members/emails/signup_completion.html", context), "text/html")
+    message.send()
 
 
 def get_signup_completion_user(uidb64, token):

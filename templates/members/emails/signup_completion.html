@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solfasol kaydınızı tamamlayın</title>
+  </head>
+  <body style="margin: 0; padding: 0; background: #f3f4f6; color: #111827; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f3f4f6; padding: 28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <tr>
+              <td style="padding: 24px 24px 12px;">
+                <p style="margin: 0 0 8px; color: #0891b2; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;">Solfasol</p>
+                <h1 style="margin: 0; color: #111827; font-size: 24px; line-height: 1.2;">Kaydınızı tamamlayın</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 24px 24px;">
+                <p style="margin: 0 0 14px; color: #374151; font-size: 16px; line-height: 1.5;">Merhaba {{ user.username }},</p>
+                <p style="margin: 0 0 22px; color: #374151; font-size: 16px; line-height: 1.5;">
+                  Solfasol hesabınız neredeyse hazır. Parolanızı belirleyerek kaydınızı tamamlayabilirsiniz.
+                </p>
+                <p style="margin: 0 0 24px;">
+                  <a href="{{ completion_url }}" style="display: inline-block; padding: 12px 18px; border-radius: 8px; background: #0891b2; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none;">Parolamı belirle</a>
+                </p>
+                <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                  Buton çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:
+                </p>
+                <p style="margin: 0; color: #0891b2; font-size: 13px; line-height: 1.5; word-break: break-all;">
+                  <a href="{{ completion_url }}" style="color: #0891b2;">{{ completion_url }}</a>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb;">
+                <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                  Bu bağlantı güvenlik nedeniyle sınırlı süre geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

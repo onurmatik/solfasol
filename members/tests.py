@@ -37,7 +37,14 @@ class SignupTests(CoopFixtureMixin, TestCase):
         self.assertTrue(UserProfile.objects.filter(user=user).exists())
         self.assertNotIn("_auth_user_id", self.client.session)
         self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Solfasol kaydınızı tamamlayın")
         self.assertIn(self.completion_url(user), mail.outbox[0].body)
+        self.assertIn("Solfasol hesabınız neredeyse hazır.", mail.outbox[0].body)
+        self.assertEqual(len(mail.outbox[0].alternatives), 1)
+        html_body, mime_type = mail.outbox[0].alternatives[0]
+        self.assertEqual(mime_type, "text/html")
+        self.assertIn("Parolamı belirle", html_body)
+        self.assertIn(self.completion_url(user), html_body)
 
     def test_pending_signup_resends_link_without_duplicate_user(self):
         payload = {"username": "newmember", "email": "new@example.com"}

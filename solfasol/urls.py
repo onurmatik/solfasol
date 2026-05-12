@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from django.conf import settings
 from django.urls import path
 
 from calendar import views as calendar_views
@@ -42,5 +43,5 @@ urlpatterns = [
     ),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('api/v1/', api.urls),
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL_PATH, admin.site.urls),
 ]

@@ -3,3 +3,7 @@ __pycache__/
 *.py[cod]
 db.sqlite3
 .DS_Store
+.env
+.env-prod
+staticfiles/
+.deploy/.credentials.env

@@ -1,0 +1,11 @@
+Merhaba {{ user.username }},
+
+Solfasol hesabınız neredeyse hazır.
+
+Aşağıdaki bağlantıyı açıp parolanızı belirleyerek kaydınızı tamamlayabilirsiniz:
+
+{{ completion_url }}
+
+Bu bağlantı güvenlik nedeniyle sınırlı süre geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
+
+Solfasol
