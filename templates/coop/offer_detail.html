@@ -1,13 +1,19 @@
 {% extends "base.html" %}
+{% load static l10n %}
 
 {% block title %}{{ offer.display_title }} - Solfasol{% endblock %}
 
 {% block content %}
-  <div class="page-header">
+  <div class="offer-detail-header">
     <div>
+      <div class="row offer-detail-kicker">
+        {% if offer.discount_rate %}
+          <span class="badge info">Kazancın {{ offer.discount_rate }}%</span>
+        {% endif %}
+        <span class="muted">{{ offer.source.name }} · {{ offer.product.name }}</span>
+      </div>
       <h1>{{ offer.display_title }}</h1>
       <p class="muted">
-        {{ offer.source.name }} · {{ offer.product.name }} ·
         {% if offer.fulfillment_date %}
           Gerçekleşme: {{ offer.fulfillment_date|date:"d M Y" }}
         {% else %}
@@ -15,129 +21,211 @@
         {% endif %}
       </p>
     </div>
-    <div class="row">
-      {% if offer.discount_rate %}
-        <span class="badge info">You save {{ offer.discount_rate }}%</span>
-      {% endif %}
-      {% if offer.is_successful %}
-        <span class="badge success">Başarılı</span>
-      {% elif offer.deadline_passed %}
-        <span class="badge warning">Deadline geçti</span>
-      {% elif offer.status == "closed" %}
-        <span class="badge danger">Kapandı</span>
-      {% else %}
-        <span class="badge success">Açık</span>
-      {% endif %}
-    </div>
   </div>
 
-  <div class="grid two">
-    <section class="panel">
-      <div class="stack">
-        <h2>Hedef durumu</h2>
-        <div class="grid three">
-          <div class="stat">
-            <span class="muted">Fiyat</span>
-            <strong>{{ offer.unit_price }} TL</strong>
-          </div>
-          <div class="stat">
-            <span class="muted">Toplam</span>
-            <strong>{{ offer.total_quantity }} {{ offer.product.unit }}</strong>
-          </div>
-          <div class="stat">
-            <span class="muted">Hedef</span>
-            <strong>{{ offer.target_quantity }} {{ offer.product.unit }}</strong>
-          </div>
-        </div>
-        <p class="muted">Kalan: {{ offer.remaining_quantity }} {{ offer.product.unit }} · Deadline: {{ offer.deadline|date:"d M Y H:i" }}</p>
-        {% if offer.admin_note %}
-          <div class="message">{{ offer.admin_note }}</div>
-        {% endif %}
-        {% if offer.product.reference_url or offer.source.website or offer.source.contact_info %}
-          <div class="stack compact">
-            {% if offer.product.reference_url %}
-              <p class="muted">Ürün referansı: <a href="{{ offer.product.reference_url }}">{{ offer.product.reference_url }}</a></p>
-            {% endif %}
-            {% if offer.source.website or offer.source.contact_info %}
-              <p class="muted">
-                Tedarikçi:
-                {% if offer.source.website %}<a href="{{ offer.source.website }}">{{ offer.source.website }}</a>{% endif %}
-                {% if offer.source.contact_info %} · {{ offer.source.contact_info }}{% endif %}
-              </p>
-            {% endif %}
-          </div>
+  <section class="panel offer-overview">
+    <div class="offer-overview-grid">
+      <div class="offer-overview-item">
+        <span>Durum</span>
+        {% if offer.is_successful %}
+          <strong class="status-text success">Başarılı</strong>
+        {% elif offer.deadline_passed %}
+          <strong class="status-text warning">Deadline geçti</strong>
+        {% elif offer.status == "closed" %}
+          <strong class="status-text danger">Kapandı</strong>
+        {% else %}
+          <strong class="status-text success">Açık</strong>
         {% endif %}
       </div>
-    </section>
+      <div class="offer-overview-item">
+        <span>Birim fiyat</span>
+        <strong>{{ offer.unit_price }} TL</strong>
+      </div>
+      <div class="offer-overview-item">
+        <span>Hedef / Toplam</span>
+        <strong>{{ offer.target_quantity }} / {{ offer.total_quantity }} {{ offer.product.unit }}</strong>
+      </div>
+      <div class="offer-overview-item">
+        <span>Kalan</span>
+        <strong>{{ offer.remaining_quantity }} {{ offer.product.unit }}</strong>
+      </div>
+      <div class="offer-overview-item">
+        <span>Son tarih</span>
+        <strong>{{ offer.deadline|date:"d M H:i" }}</strong>
+      </div>
+      <div class="offer-overview-item">
+        <span>Doluluk</span>
+        <strong>{{ offer_progress_percent }}%</strong>
+      </div>
+    </div>
+    <div class="offer-progress compact offer-overview-progress">
+      <div class="row between">
+        <span class="muted">Hedef ilerlemesi</span>
+        <strong>{{ offer.total_quantity }} / {{ offer.target_quantity }} {{ offer.product.unit }}</strong>
+      </div>
+      <progress value="{{ offer.total_quantity|unlocalize }}" max="{{ offer.target_quantity|unlocalize }}">
+        {{ offer_progress_percent }}%
+      </progress>
+    </div>
+  </section>
 
-    <section class="panel">
-      <div class="stack">
-        <h2>Benim talebim</h2>
-        {% if not can_write_intent %}
-          {% if offer.accepts_intents %}
-            <div class="empty">
-              Talep girmek için <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">giriş yapın</a>
-              veya <a href="{% url 'signup' %}">kayıt olun</a>.
+  <div class="offer-detail-layout">
+    <aside class="offer-detail-side">
+      <section class="panel intent-panel">
+        <div class="stack">
+          <div class="section-heading">
+            <div>
+              <h2>Benim talebim</h2>
             </div>
+          </div>
+
+          {% if not can_write_intent %}
+            {% if offer.accepts_intents %}
+              <div class="empty">
+                Talep girmek için <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">giriş yapın</a>
+                veya <a href="{% url 'signup' %}">kayıt olun</a>.
+              </div>
+            {% else %}
+              <div class="empty">Bu teklif artık yeni talep veya değişiklik kabul etmiyor.</div>
+            {% endif %}
+          {% elif offer.accepts_intents %}
+            {% if existing_intent %}
+              <div class="intent-current-summary">
+                <span class="badge success">Aktif talebiniz var</span>
+                <strong>{{ existing_intent.quantity }} {{ offer.product.unit }} · {{ existing_intent_total_display }} TL</strong>
+                <span class="muted">{{ existing_intent.delivery_point.name|default:"Teslim noktası seçilmedi" }}</span>
+              </div>
+            {% endif %}
+
+            <form method="post" class="stack intent-form">
+              {% csrf_token %}
+              {{ form.non_field_errors }}
+
+              <div class="intent-form-row" data-payment-calculator data-unit-price="{{ offer.unit_price|unlocalize }}">
+                <div class="form-field">
+                  <label for="{{ form.quantity.id_for_label }}">Miktar ({{ offer.product.unit }})</label>
+                  {{ form.quantity }}
+                  <span class="payment-inline" aria-live="polite">
+                    Ödenecek: <strong><span data-payment-total>{{ intent_payment_total_display }}</span> TL</strong>
+                  </span>
+                  {{ form.quantity.errors }}
+                </div>
+                <div class="form-field">
+                  <label for="{{ form.delivery_point.id_for_label }}">Teslim noktası</label>
+                  {{ form.delivery_point }}
+                  {{ form.delivery_point.errors }}
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="{{ form.note.id_for_label }}">Not</label>
+                {{ form.note }}
+                {{ form.note.errors }}
+              </div>
+
+              <div class="form-actions">
+                {% if existing_intent %}
+                  <button class="primary full-width" type="submit">Talebi güncelle</button>
+                {% else %}
+                  <button class="primary full-width" type="submit">Talep gir</button>
+                {% endif %}
+              </div>
+            </form>
+
+            {% if existing_intent %}
+              <form method="post" action="{% url 'delete_offer_intent' existing_intent.pk %}">
+                {% csrf_token %}
+                <button class="danger full-width" type="submit">Talebimi iptal et</button>
+              </form>
+            {% endif %}
           {% else %}
             <div class="empty">Bu teklif artık yeni talep veya değişiklik kabul etmiyor.</div>
           {% endif %}
-        {% elif offer.accepts_intents %}
-          <form method="post" class="stack">
-            {% csrf_token %}
-            {{ form.as_div }}
-            <div class="form-actions">
-              {% if existing_intent %}
-                <button class="primary" type="submit">Talebi güncelle</button>
-              {% else %}
-                <button class="primary" type="submit">Talep gir</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="offer-detail-main stack">
+      <section class="panel">
+        <div class="stack">
+          <h2>Teklif bilgileri</h2>
+
+          {% if offer.admin_note %}
+            <div class="message">{{ offer.admin_note }}</div>
+          {% endif %}
+
+          {% if offer.product.reference_url or offer.source.website or offer.source.contact_info %}
+            <div class="detail-meta-grid">
+              {% if offer.product.reference_url %}
+                <div class="detail-meta-item">
+                  <span>Ürün referansı</span>
+                  <a href="{{ offer.product.reference_url }}">{{ offer.product.reference_url }}</a>
+                </div>
+              {% endif %}
+              {% if offer.source.website or offer.source.contact_info %}
+                <div class="detail-meta-item">
+                  <span>Tedarikçi</span>
+                  <p>
+                    {% if offer.source.website %}<a href="{{ offer.source.website }}">{{ offer.source.website }}</a>{% endif %}
+                    {% if offer.source.contact_info %} · {{ offer.source.contact_info }}{% endif %}
+                  </p>
+                </div>
               {% endif %}
             </div>
-          </form>
-          {% if existing_intent %}
-            <form method="post" action="{% url 'delete_offer_intent' existing_intent.pk %}">
-              {% csrf_token %}
-              <button class="danger" type="submit">Talebimi iptal et</button>
-            </form>
           {% endif %}
-        {% else %}
-          <div class="empty">Bu teklif artık yeni talep veya değişiklik kabul etmiyor.</div>
-        {% endif %}
-      </div>
-    </section>
-  </div>
-
-  <section class="panel" style="margin-top: 16px;">
-    <div class="stack">
-      <h2>Katılım listesi</h2>
-      {% if show_participation %}
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Üye</th>
-                <th>Miktar</th>
-                <th>Teslim</th>
-                <th>Not</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for intent in intents %}
-                <tr>
-                  <td>{{ intent.member.get_username }}</td>
-                  <td>{{ intent.quantity }} {{ offer.product.unit }}</td>
-                  <td>{{ intent.delivery_point.name|default:"-" }}</td>
-                  <td>{{ intent.note|default:"-" }}</td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="4">Henüz talep yok.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
         </div>
-      {% else %}
-        <div class="empty">Katılım detayları için giriş yapın.</div>
-      {% endif %}
-    </div>
-  </section>
+      </section>
+
+      <section class="panel participation-panel">
+        <div class="stack">
+          <div class="section-heading">
+            <div>
+              <h2>Katılım listesi</h2>
+            </div>
+            {% if show_participation %}
+              <span class="badge">{{ intents|length }} üye</span>
+            {% endif %}
+          </div>
+
+          {% if show_participation %}
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Üye</th>
+                    <th>Miktar</th>
+                    <th>Teslim</th>
+                    <th>Not</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for intent in intents %}
+                    <tr{% if intent.member_id == user.id %} class="current-user-row"{% endif %}>
+                      <td>
+                        {{ intent.member.get_username }}
+                        {% if intent.member_id == user.id %}
+                          <span class="badge success small-badge">Siz</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ intent.quantity }} {{ offer.product.unit }}</td>
+                      <td>{{ intent.delivery_point.name|default:"-" }}</td>
+                      <td>{{ intent.note|default:"-" }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr><td colspan="4">Henüz talep yok.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="empty">Katılım detayları için giriş yapın.</div>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/offer_detail.js' %}" defer></script>
 {% endblock %}

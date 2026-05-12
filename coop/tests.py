@@ -114,6 +114,28 @@ class ModelValidationTests(CoopFixtureMixin, TestCase):
         with self.assertRaises(ValidationError):
             duplicate.full_clean()
 
+    def test_intent_rejects_quantity_that_exceeds_target(self):
+        other = User.objects.create_user(username="other")
+        UserProfile.objects.create(user=other, is_coop_member=True)
+        MemberOfferIntent.objects.create(member=other, offer=self.offer, quantity=8)
+        intent = MemberOfferIntent(member=self.member, offer=self.offer, quantity=3)
+
+        with self.assertRaisesMessage(ValidationError, "en fazla 2 adet"):
+            intent.full_clean()
+
+    def test_intent_update_counts_existing_member_quantity_only_once(self):
+        intent = MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=6)
+        other = User.objects.create_user(username="other")
+        UserProfile.objects.create(user=other, is_coop_member=True)
+        MemberOfferIntent.objects.create(member=other, offer=self.offer, quantity=3)
+
+        intent.quantity = 7
+        intent.full_clean()
+
+        intent.quantity = 8
+        with self.assertRaisesMessage(ValidationError, "en fazla 7 adet"):
+            intent.full_clean()
+
     def test_offer_fulfillment_date_is_optional(self):
         offer = ProcurementOffer(
             title="",
@@ -228,6 +250,26 @@ class CoopApiTests(CoopFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_offer_intent_api_rejects_quantity_over_target(self):
+        other = User.objects.create_user(username="other")
+        UserProfile.objects.create(user=other, is_coop_member=True)
+        MemberOfferIntent.objects.create(member=other, offer=self.offer, quantity=9)
+        self.client.login(username="member", password="pass12345")
+
+        response = self.post_json(f"/api/v1/offers/{self.offer.id}/intent", {"quantity": 2})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(MemberOfferIntent.objects.filter(member=self.member, offer=self.offer).exists())
+
+    def test_offer_intent_api_update_counts_existing_quantity_once(self):
+        self.client.login(username="member", password="pass12345")
+        MemberOfferIntent.objects.create(member=self.member, offer=self.offer, quantity=8)
+
+        response = self.post_json(f"/api/v1/offers/{self.offer.id}/intent", {"quantity": 10})
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(MemberOfferIntent.objects.get(member=self.member, offer=self.offer).quantity, 10)
+
     def test_admin_crud_api_routes_are_removed(self):
         self.client.login(username="staff", password="pass12345")
 
@@ -317,7 +359,7 @@ class CoopViewTests(CoopFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ABC Ziraat 5lt zeytinyağı")
         self.assertContains(response, "https://example.com/product")
-        self.assertContains(response, "You save 30%")
+        self.assertContains(response, "Kazancın 30%")
         self.assertContains(response, "Toplam")
         self.assertContains(response, "2")
         self.assertContains(response, "Katılım detayları için giriş yapın")
@@ -332,6 +374,46 @@ class CoopViewTests(CoopFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("login"), response["Location"])
         self.assertFalse(MemberOfferIntent.objects.exists())
+
+    def test_offer_detail_rejects_quantity_over_target(self):
+        other = User.objects.create_user(username="other")
+        UserProfile.objects.create(user=other, is_coop_member=True)
+        MemberOfferIntent.objects.create(member=other, offer=self.offer, quantity=9)
+        self.client.login(username="member", password="pass12345")
+
+        response = self.client.post(
+            reverse("offer_detail", kwargs={"pk": self.offer.pk}),
+            {"quantity": "2", "delivery_point": self.delivery_point.id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "hedef miktarı aşıyor")
+        self.assertFalse(MemberOfferIntent.objects.filter(member=self.member, offer=self.offer).exists())
+
+    def test_offer_detail_shows_payment_total_next_to_member_quantity(self):
+        self.client.login(username="member", password="pass12345")
+        MemberOfferIntent.objects.create(
+            member=self.member,
+            offer=self.offer,
+            quantity=3,
+            delivery_point=self.delivery_point,
+        )
+
+        response = self.client.get(reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+
+        self.assertContains(response, "Ödenecek:")
+        self.assertContains(response, "3.000 TL")
+        self.assertContains(response, 'data-unit-price="1000"')
+        self.assertContains(response, 'data-payment-quantity="true"')
+
+    def test_offer_detail_defaults_new_member_payment_total_to_one_unit(self):
+        self.client.login(username="member", password="pass12345")
+
+        response = self.client.get(reverse("offer_detail", kwargs={"pk": self.offer.pk}))
+
+        self.assertContains(response, "Ödenecek:")
+        self.assertContains(response, 'value="1"')
+        self.assertContains(response, ">1.000</span> TL")
 
     def test_ops_routes_are_removed(self):
         self.client.login(username="staff", password="pass12345")

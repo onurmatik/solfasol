@@ -196,3 +196,19 @@ class MemberOfferIntent(TimeStampedModel):
     def clean(self):
         if self.offer_id and not self.offer.accepts_intents:
             raise ValidationError("Bu teklif artık üye talebi kabul etmiyor.")
+        if self.offer_id and self.quantity:
+            sibling_intents = self.offer.intents.all()
+            if self.pk:
+                sibling_intents = sibling_intents.exclude(pk=self.pk)
+            existing_quantity = sibling_intents.aggregate(total=Sum("quantity"))["total"] or 0
+            requested_total = existing_quantity + self.quantity
+            if requested_total > self.offer.target_quantity:
+                remaining_quantity = max(self.offer.target_quantity - existing_quantity, 0)
+                raise ValidationError(
+                    {
+                        "quantity": (
+                            "Girilen miktar hedef miktarı aşıyor. "
+                            f"Bu teklif için en fazla {remaining_quantity} {self.offer.product.unit} daha talep edilebilir."
+                        )
+                    }
+                )

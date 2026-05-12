@@ -159,22 +159,17 @@ def upsert_offer_intent(request, offer_id: int, payload: OfferIntentIn):
     delivery_point = None
     if payload.delivery_point_id:
         delivery_point = get_object_or_404(DeliveryPoint, pk=payload.delivery_point_id, is_active=True)
-    intent = MemberOfferIntent(
-        member=request.user,
-        offer=offer,
-        delivery_point=delivery_point,
-        quantity=payload.quantity,
-        note=payload.note,
-    )
+    intent = MemberOfferIntent.objects.filter(member=request.user, offer=offer).first()
+    if intent is None:
+        intent = MemberOfferIntent(member=request.user, offer=offer)
+    intent.delivery_point = delivery_point
+    intent.quantity = payload.quantity
+    intent.note = payload.note
     try:
         intent.full_clean(validate_unique=False)
     except DjangoValidationError as exc:
         raise_bad_request(exc)
-    intent, _created = MemberOfferIntent.objects.update_or_create(
-        member=request.user,
-        offer=offer,
-        defaults={"delivery_point": delivery_point, "quantity": payload.quantity, "note": payload.note},
-    )
+    intent.save()
     return intent_out(intent)
 
 

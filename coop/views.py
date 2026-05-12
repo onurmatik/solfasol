@@ -175,6 +175,28 @@ def _save_member_offer_intent(request, offer, form):
     return True
 
 
+def _format_tl(value):
+    return f"{value:,}".replace(",", ".")
+
+
+def _payment_quantity_from_form(form, existing_intent):
+    fallback = existing_intent.quantity if existing_intent else 1
+    raw_quantity = form["quantity"].value()
+    if raw_quantity in (None, ""):
+        return fallback
+    try:
+        quantity = int(raw_quantity)
+    except (TypeError, ValueError):
+        return 0
+    return quantity if quantity > 0 else 0
+
+
+def _offer_progress_percent(offer):
+    if not offer.target_quantity:
+        return 0
+    return min(round((offer.total_quantity / offer.target_quantity) * 100), 100)
+
+
 def dashboard(request):
     active_offers = list(
         ProcurementOffer.objects.filter(status=ProcurementOffer.Status.OPEN)
@@ -252,10 +274,14 @@ def offer_detail(request, pk):
                 messages.success(request, "Teklif talebiniz kaydedildi.")
                 return redirect("offer_detail", pk=offer.pk)
     else:
-        form = MemberOfferIntentForm(instance=existing_intent)
+        initial = {} if existing_intent else {"quantity": 1}
+        form = MemberOfferIntentForm(instance=existing_intent, initial=initial)
 
     show_participation = can_write_intent
     intents = offer.intents.select_related("member", "delivery_point").order_by("-created_at") if show_participation else []
+    payment_quantity = _payment_quantity_from_form(form, existing_intent)
+    intent_payment_total = payment_quantity * offer.unit_price
+    existing_intent_total = existing_intent.quantity * offer.unit_price if existing_intent else 0
     return render(
         request,
         "coop/offer_detail.html",
@@ -264,7 +290,10 @@ def offer_detail(request, pk):
             "can_write_intent": can_write_intent,
             "form": form,
             "existing_intent": existing_intent,
+            "existing_intent_total_display": _format_tl(existing_intent_total),
+            "intent_payment_total_display": _format_tl(intent_payment_total),
             "intents": intents,
+            "offer_progress_percent": _offer_progress_percent(offer),
             "show_participation": show_participation,
         },
     )
