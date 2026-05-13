@@ -26,7 +26,7 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Açık teklifler")
+        self.assertContains(response, "Açık siparişler")
         self.assertContains(response, f'class="offer-sidebar-card" href="{reverse("offer_detail", kwargs={"pk": self.offer.pk})}"')
         self.assertContains(response, "5lt zeytinyağı · ABC Ziraat")
         self.assertContains(response, "Kazancın 30%")
@@ -45,17 +45,19 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         self.assertContains(response, "weekly-calendar-grid")
         self.assertContains(response, "Yaklaşan etkinlikler")
         self.assertContains(response, "Kompost atölyesi")
-        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertContains(response, "5lt zeytinyağı sipariş son başvuru")
         self.assertContains(response, "solfasol-logo.png")
         self.assertContains(response, f'href="{reverse("login")}"')
         self.assertNotContains(response, "Takvim etkinlikleri ve aktif sipariş talepleri tek ekranda.")
         self.assertNotContains(response, "Talep girmek için")
+        self.assertNotContains(response, "Talebin")
         self.assertNotContains(response, "Talebim var")
 
         self.client.login(username="member", password="pass12345")
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, "Talebim var")
+        self.assertContains(response, "Talebin")
+        self.assertNotContains(response, "Talebim var")
         self.assertNotContains(response, "Talep gir")
         self.assertNotContains(response, "Talebi düzenle")
         self.assertNotContains(response, "Son taleplerim")
@@ -69,8 +71,9 @@ class DashboardTests(CoopFixtureMixin, TestCase):
         self.assertContains(response, "weekly-calendar-grid")
         self.assertContains(response, "weekly-day-card")
         self.assertContains(response, "Haftanın etkinlikleri")
-        self.assertContains(response, "Deadline")
-        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertContains(response, "Son başvuru")
+        self.assertContains(response, "5lt zeytinyağı sipariş son başvuru")
+        self.assertNotContains(response, "Deadline")
 
 
 class ModelValidationTests(CoopFixtureMixin, TestCase):

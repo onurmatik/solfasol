@@ -81,7 +81,7 @@ CSRF_TRUSTED_ORIGINS = env_list(
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ADMIN_URL_PATH = normalize_path_prefix(os.getenv('DJANGO_ADMIN_URL_PATH'), 'admin')
 
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'hello@solfasol.org')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'merhaba@solfasol.org')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',

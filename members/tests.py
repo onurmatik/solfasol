@@ -38,6 +38,7 @@ class SignupTests(CoopFixtureMixin, TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, "Solfasol kaydınızı tamamlayın")
+        self.assertEqual(mail.outbox[0].from_email, "merhaba@solfasol.org")
         self.assertIn(self.completion_url(user), mail.outbox[0].body)
         self.assertIn("Solfasol hesabınız neredeyse hazır.", mail.outbox[0].body)
         self.assertEqual(len(mail.outbox[0].alternatives), 1)

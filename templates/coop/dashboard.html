@@ -142,7 +142,7 @@
         <div class="stack">
           <div class="section-heading">
             <div>
-              <h2>Açık teklifler</h2>
+              <h2>Açık siparişler</h2>
             </div>
             <span class="badge">{{ active_offer_count }} açık</span>
           </div>
@@ -169,7 +169,7 @@
                       {% if offer.is_successful %}
                         <span class="badge success">Başarılı</span>
                       {% elif offer.deadline_passed %}
-                        <span class="badge warning">Deadline geçti</span>
+                        <span class="badge warning">Son başvuru geçti</span>
                       {% endif %}
                     </div>
                   {% endif %}
@@ -189,7 +189,7 @@
 
                   {% if intent %}
                     <div class="intent-highlight">
-                      <span class="badge success">Talebim var</span>
+                      <span class="badge success">Talebin</span>
                       <strong class="mono">{{ intent.quantity }} {{ offer.product.unit }}</strong>
                     </div>
                   {% endif %}

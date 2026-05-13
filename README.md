@@ -1,6 +1,6 @@
 # Solfasol
 
-Ankara merkezli online tüketici kooperatifi MVP'si. V1'de admin sabit teklif yayınlar; içerik herkese açıktır, kayıtlı kullanıcılar deadline'a kadar adet/miktar talebi girer.
+Ankara merkezli online tüketici kooperatifi MVP'si. V1'de admin sabit teklif yayınlar; içerik herkese açıktır, kayıtlı kullanıcılar son başvuruya kadar adet/miktar talebi girer.
 
 ## Kurulum
 

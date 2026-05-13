@@ -168,7 +168,7 @@ class ProcurementOffer(TimeStampedModel):
         if self.fulfillment_date and self.deadline:
             deadline_date = timezone.localtime(self.deadline).date() if timezone.is_aware(self.deadline) else self.deadline.date()
             if self.fulfillment_date < deadline_date:
-                raise ValidationError({"fulfillment_date": "Fulfillment date deadline'dan önce olamaz."})
+                raise ValidationError({"fulfillment_date": "Gerçekleşme tarihi son başvurudan önce olamaz."})
 
 
 class MemberOfferIntent(TimeStampedModel):

@@ -30,7 +30,7 @@
         {% if offer.is_successful %}
           <strong class="status-text success">Başarılı</strong>
         {% elif offer.deadline_passed %}
-          <strong class="status-text warning">Deadline geçti</strong>
+          <strong class="status-text warning">Son başvuru geçti</strong>
         {% elif offer.status == "closed" %}
           <strong class="status-text danger">Kapandı</strong>
         {% else %}
@@ -50,7 +50,7 @@
         <strong>{{ offer.remaining_quantity }} {{ offer.product.unit }}</strong>
       </div>
       <div class="offer-overview-item">
-        <span>Son tarih</span>
+        <span>Son başvuru</span>
         <strong>{{ offer.deadline|date:"d M H:i" }}</strong>
       </div>
       <div class="offer-overview-item">

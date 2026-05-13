@@ -56,7 +56,7 @@ class CalendarViewTests(CoopFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Kompost atölyesi")
         self.assertContains(response, "Community Center")
-        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertContains(response, "5lt zeytinyağı sipariş son başvuru")
         self.assertContains(response, "5lt zeytinyağı teslimat")
         self.assertNotContains(response, "Taslak etkinlik")
         self.assertNotContains(response, "İptal etkinlik")
@@ -76,7 +76,7 @@ class CalendarViewTests(CoopFixtureMixin, TestCase):
         response = self.client.get(reverse("calendar"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "5lt zeytinyağı sipariş deadline")
+        self.assertContains(response, "5lt zeytinyağı sipariş son başvuru")
         self.assertNotContains(response, "5lt zeytinyağı teslimat")
 
 
@@ -97,7 +97,7 @@ class CalendarApiTests(CoopFixtureMixin, TestCase):
         self.assertEqual(len(offer_entries), 2)
         serialized = json.dumps(payload, ensure_ascii=False)
         self.assertIn("Forum", serialized)
-        self.assertIn("5lt zeytinyağı sipariş deadline", serialized)
+        self.assertIn("5lt zeytinyağı sipariş son başvuru", serialized)
         self.assertNotIn("1000.00", serialized)
         self.assertNotIn("ABC Ziraat", serialized)
         self.assertTrue(all(entry["offer_url"] == reverse("offer_detail", kwargs={"pk": self.offer.pk}) for entry in offer_entries))

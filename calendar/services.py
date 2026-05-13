@@ -14,7 +14,7 @@ DELIVERY = "delivery"
 
 
 EVENT_TYPE_LABELS = {
-    ORDER_DEADLINE: "Sipariş deadline",
+    ORDER_DEADLINE: "Sipariş son başvuru",
     DELIVERY: "Teslimat",
     CalendarEvent.EventType.EDUCATION: CalendarEvent.EventType.EDUCATION.label,
     CalendarEvent.EventType.COMMUNITY: CalendarEvent.EventType.COMMUNITY.label,
@@ -74,7 +74,7 @@ def _offer_entries(offer):
         CalendarEntry(
             id=f"offer-{offer.id}-deadline",
             source="offer",
-            title=f"{title} sipariş deadline",
+            title=f"{title} sipariş son başvuru",
             event_type=ORDER_DEADLINE,
             event_type_label=EVENT_TYPE_LABELS[ORDER_DEADLINE],
             starts_at=offer.deadline,

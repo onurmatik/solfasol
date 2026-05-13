@@ -54,7 +54,7 @@ def _entry_week_title(entry):
     if entry.event_type == DELIVERY:
         return "Teslimat"
     if entry.event_type == ORDER_DEADLINE:
-        return "Deadline"
+        return "Son başvuru"
     return entry.title
 
 
@@ -305,7 +305,7 @@ def delete_offer_intent(request, pk):
     intent = get_object_or_404(MemberOfferIntent, pk=pk, member=request.user)
     offer_pk = intent.offer_id
     if not intent.offer.accepts_intents:
-        messages.error(request, "Deadline geçtikten sonra talep iptal edilemez.")
+        messages.error(request, "Son başvuru geçtikten sonra talep iptal edilemez.")
         return redirect("offer_detail", pk=offer_pk)
     intent.delete()
     messages.success(request, "Teklif talebiniz iptal edildi.")

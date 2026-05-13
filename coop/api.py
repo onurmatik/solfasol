@@ -178,6 +178,6 @@ def delete_offer_intent(request, intent_id: int):
     require_active_user(request.user)
     intent = get_object_or_404(MemberOfferIntent.objects.select_related("offer"), pk=intent_id, member=request.user)
     if not intent.offer.accepts_intents:
-        raise HttpError(400, "Deadline geçtikten sonra talep iptal edilemez.")
+        raise HttpError(400, "Son başvuru geçtikten sonra talep iptal edilemez.")
     intent.delete()
     return {"deleted": True}
