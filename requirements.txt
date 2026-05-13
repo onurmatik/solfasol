@@ -6,3 +6,4 @@ requests
 fabric
 PyJWT[crypto]
 gunicorn
+whitenoise[brotli]
